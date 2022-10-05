@@ -87,22 +87,20 @@ internal class ModelCheckingStrategy(
                         toString().split("\n").toTypedArray()
                     }
                     testFailed(strings)
-                    val replayedInvocationResult = doReplay(results)
-                    if (failure is IncorrectResultsFailure) {
-                        check(failure.results == (replayedInvocationResult as CompletedInvocationResult).results)
-                        val replayedFailure = checkResult(replayedInvocationResult)
-                        check(replayedFailure is IncorrectResultsFailure)
-
-                        val stringsReplayed = with(StringBuilder()) {
-                            appendTrace(replayedFailure.scenario, results, replayedFailure.trace!!, insertTitle = false)
-                            toString().split("\n").toTypedArray()
-                        }
-
-                        check(strings.contentEquals(stringsReplayed))
-                    }
-//                    while (replay()) {
-////                        doReplay() SHOULD ALWAYS COLLECT TRACE
+//                    val replayedInvocationResult = doReplay()
+//                    if (failure is IncorrectResultsFailure) {
+//                        check(failure.results == (replayedInvocationResult as CompletedInvocationResult).results)
+//                        val replayedFailure = checkResult(replayedInvocationResult)
+//                        check(replayedFailure is IncorrectResultsFailure)
+//                        val stringsReplayed = with(StringBuilder()) {
+//                            appendTrace(replayedFailure.scenario, results, replayedFailure.trace!!, insertTitle = false)
+//                            toString().split("\n").toTypedArray()
+//                        }
+//                        check(strings.contentEquals(stringsReplayed))
 //                    }
+                    while (replay()) {
+                        doReplay()
+                    }
                 }
                 return failure
             }
@@ -110,8 +108,8 @@ internal class ModelCheckingStrategy(
         return null
     }
 
-    private fun doReplay(firstResults: ExecutionResult?): InvocationResult {
-        currentInterleaving = currentInterleaving.copy()
+    private fun doReplay(): InvocationResult {
+//        currentInterleaving = currentInterleaving.copy()
         return runInvocation()
     }
 
