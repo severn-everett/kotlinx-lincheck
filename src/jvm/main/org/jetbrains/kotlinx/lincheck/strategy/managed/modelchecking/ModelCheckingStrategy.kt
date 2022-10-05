@@ -76,33 +76,36 @@ internal class ModelCheckingStrategy(
             currentInterleaving = root.nextInterleaving() ?: break
             usedInvocations++
             // run invocation and check its results
-            checkResult(runInvocation())?.let {
+            checkResult(runInvocation())?.let { failure ->
                 // An error has been detected!
                 // Should we f**cking replay it?
-                if (replay && it.trace != null) {
+                if (replay && failure.trace != null) {
                     // TODO support actorsBefore / actorsAfter
-                    val results = if (it is IncorrectResultsFailure) it.results else null
+                    val results = if (failure is IncorrectResultsFailure) failure.results else null
                     val strings = with(StringBuilder()) {
-                        appendTrace(it.scenario, results, it.trace, insertTitle = false)
-                        toString().split("\n")
+                        appendTrace(failure.scenario, results, failure.trace, insertTitle = false)
+                        toString().split("\n").toTypedArray()
                     }
-                    testFailed(strings.mapIndexed { i, s -> Pair(i, s) })
-                    doReplay(results)
+                    testFailed(strings)
+                    val replayedInvocationResult = doReplay(results)
+                    if (failure is IncorrectResultsFailure) {
+                        check(failure.results == (replayedInvocationResult as CompletedInvocationResult).results)
+                        val replayedFailure = checkResult(replayedInvocationResult)
+                        check(replayedFailure is IncorrectResultsFailure)
+                    }
                     while (replay()) {
 //                        doReplay() SHOULD ALWAYS COLLECT TRACE
                     }
                 }
-                return it
+                return failure
             }
         }
         return null
     }
 
-    private fun doReplay(firstResults: ExecutionResult?) {
-        // todo assert that we got the same results
-        // todo always collect trace
-        val invocationResult = runInvocation()
-        check(invocationResult is CompletedInvocationResult && invocationResult.results == firstResults)
+    private fun doReplay(firstResults: ExecutionResult?): InvocationResult {
+        currentInterleaving = currentInterleaving.copy()
+        return runInvocation()
     }
 
     override fun onNewSwitch(iThread: Int, mustSwitch: Boolean) {
@@ -268,6 +271,8 @@ internal class ModelCheckingStrategy(
                 lastNotInitializedNode = null
             }
         }
+
+        fun copy() = Interleaving(switchPositions, threadSwitchChoices, lastNotInitializedNode)
 
         fun chooseThread(iThread: Int): Int =
             if (nextThreadToSwitch.hasNext()) {

@@ -23,8 +23,8 @@ package org.jetbrains.kotlinx.lincheck
 // This is org.jetbrains.kotlinx.lincheck.IdeaPluginKt class
 
 // Invoked by Lincheck after the minimization is applied. DO NOT FORGET TO TURN OFF THE RUNNER TIMEOUTS.
-fun testFailed(trace: List<Pair<Int, String>>) {
-//    println(trace)
+fun testFailed(trace: Array<String>) {
+//    println(trace.contentToString())
 }
 
 fun replay(): Boolean {
