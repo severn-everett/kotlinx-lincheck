@@ -86,6 +86,7 @@ internal class ModelCheckingStrategy(
                         toString().split("\n")
                     }
                     testFailed(strings.mapIndexed { i, s -> Pair(i, s) })
+//                    doReplay()
                     while (replay()) {
 //                        doReplay() SHOULD ALWAYS COLLECT TRACE
                     }
