@@ -373,6 +373,7 @@ abstract class ManagedStrategy(
      * A regular context thread switch to another thread.
      */
     private fun switchCurrentThread(iThread: Int, reason: SwitchReason = SwitchReason.STRATEGY_SWITCH, mustSwitch: Boolean = false) {
+        if (collectTrace) beforeEvent(traceCollector!!.trace.size)
         traceCollector?.newSwitch(iThread, reason)
         doSwitchCurrentThread(iThread, mustSwitch)
         awaitTurn(iThread)
@@ -474,6 +475,7 @@ abstract class ManagedStrategy(
     internal fun beforeLockRelease(iThread: Int, codeLocation: Int, tracePoint: MonitorExitTracePoint?, monitor: Any): Boolean {
         if (!isTestThread(iThread)) return true
         monitorTracker.releaseMonitor(monitor)
+        if (collectTrace) beforeEvent(traceCollector!!.trace.size)
         traceCollector?.passCodeLocation(tracePoint)
         return false
     }
@@ -529,6 +531,7 @@ abstract class ManagedStrategy(
             monitorTracker.notifyAll(monitor)
         else
             monitorTracker.notify(monitor)
+        if (collectTrace) beforeEvent(traceCollector!!.trace.size)
         traceCollector?.passCodeLocation(tracePoint)
         return false
     }
