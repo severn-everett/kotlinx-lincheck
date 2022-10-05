@@ -86,7 +86,7 @@ internal class ModelCheckingStrategy(
                         toString().split("\n")
                     }
                     testFailed(strings.mapIndexed { i, s -> Pair(i, s) })
-//                    doReplay()
+                    doReplay(it)
                     while (replay()) {
 //                        doReplay() SHOULD ALWAYS COLLECT TRACE
                     }
@@ -95,6 +95,12 @@ internal class ModelCheckingStrategy(
             }
         }
         return null
+    }
+
+    private fun doReplay(firstResults: LincheckFailure): LincheckFailure? {
+        // todo assert that we got the same results
+        // todo always collect trace
+        return checkResult(runInvocation())
     }
 
     override fun onNewSwitch(iThread: Int, mustSwitch: Boolean) {
