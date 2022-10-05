@@ -60,6 +60,8 @@ abstract class ManagedStrategy(
     // to keep them different in different code locations.
     private val codeLocationIdProvider = CodeLocationIdProvider()
 
+    private val eventCounterProvider = EventCounterProvider()
+
     // == EXECUTION CONTROL FIELDS ==
 
     // Which thread is allowed to perform operations?
@@ -102,6 +104,8 @@ abstract class ManagedStrategy(
     // used on resumption, and the trace point before and after the suspension
     // correspond to the same method call in the trace.
     private val suspendedFunctionsStack = Array(nThreads) { mutableListOf<Int>() }
+    // Whether doReplay() is invoked to repeat an interleaving execution.
+    private var doReplayInvoked = false
 
     init {
         runner = createRunner()
@@ -129,7 +133,9 @@ abstract class ManagedStrategy(
         eliminateLocalObjects = testCfg.eliminateLocalObjects,
         collectStateRepresentation = collectStateRepresentation,
         constructTraceRepresentation = collectTrace,
-        codeLocationIdProvider = codeLocationIdProvider
+        codeLocationIdProvider = codeLocationIdProvider,
+        eventCounterProvider = eventCounterProvider,
+        doReplayInvoked = doReplayInvoked
     )
 
     override fun needsTransformation(): Boolean = true
@@ -214,6 +220,7 @@ abstract class ManagedStrategy(
         }
         // Re-transform class constructing trace
         collectTrace = true
+        doReplayInvoked = true
         // Replace the current runner with a new one in order to use a new
         // `TransformationClassLoader` with a transformer that inserts the trace collection logic.
         runner.close()
@@ -303,7 +310,6 @@ abstract class ManagedStrategy(
             val reason = if (isLoop) SwitchReason.ACTIVE_LOCK else SwitchReason.STRATEGY_SWITCH
             switchCurrentThread(iThread, reason)
         }
-        if (collectTrace) beforeEvent(traceCollector!!.nextEventId)
         traceCollector?.passCodeLocation(tracePoint)
         // continue the operation
     }
@@ -373,7 +379,6 @@ abstract class ManagedStrategy(
      * A regular context thread switch to another thread.
      */
     private fun switchCurrentThread(iThread: Int, reason: SwitchReason = SwitchReason.STRATEGY_SWITCH, mustSwitch: Boolean = false) {
-        if (collectTrace) beforeEvent(traceCollector!!.nextEventId)
         traceCollector?.newSwitch(iThread, reason)
         doSwitchCurrentThread(iThread, mustSwitch)
         awaitTurn(iThread)
@@ -475,7 +480,6 @@ abstract class ManagedStrategy(
     internal fun beforeLockRelease(iThread: Int, codeLocation: Int, tracePoint: MonitorExitTracePoint?, monitor: Any): Boolean {
         if (!isTestThread(iThread)) return true
         monitorTracker.releaseMonitor(monitor)
-        if (collectTrace) beforeEvent(traceCollector!!.nextEventId)
         traceCollector?.passCodeLocation(tracePoint)
         return false
     }
@@ -531,7 +535,6 @@ abstract class ManagedStrategy(
             monitorTracker.notifyAll(monitor)
         else
             monitorTracker.notify(monitor)
-        if (collectTrace) beforeEvent(traceCollector!!.nextEventId)
         traceCollector?.passCodeLocation(tracePoint)
         return false
     }
@@ -617,7 +620,6 @@ abstract class ManagedStrategy(
             } else {
                 methodCallNumber++
             }
-            beforeEvent(traceCollector!!.nextEventId)
             // code location of the new method call is currently the last
             callStackTrace.add(CallStackTraceElement(tracePoint, methodId))
         }

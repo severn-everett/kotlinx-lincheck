@@ -44,7 +44,9 @@ internal class ManagedStrategyTransformer(
     private val eliminateLocalObjects: Boolean,
     private val collectStateRepresentation: Boolean,
     private val constructTraceRepresentation: Boolean,
-    private val codeLocationIdProvider: CodeLocationIdProvider
+    private val codeLocationIdProvider: CodeLocationIdProvider,
+    private val eventCounterProvider: EventCounterProvider,
+    private val doReplayInvoked: Boolean
 ) : ClassVisitor(ASM_API, ClassRemapper(cv, JavaUtilRemapper())) {
     private lateinit var className: String
     private var classVersion = 0
@@ -324,6 +326,7 @@ internal class ManagedStrategyTransformer(
         private fun invokeBeforeSharedVariableReadOrWrite(
             method: Method, tracePointLocal: Int?, tracePointType: Type, codeLocationConstructor: CodeLocationTracePointConstructor
         ) {
+            invokeBeforeEvent()
             loadStrategy()
             loadCurrentThreadNumber()
             loadNewCodeLocationAndTracePoint(tracePointLocal, tracePointType, codeLocationConstructor)
@@ -380,6 +383,7 @@ internal class ManagedStrategyTransformer(
         }
 
         private fun invokeBeforeAtomicMethodCall() {
+            invokeBeforeEvent()
             loadStrategy()
             loadCurrentThreadNumber()
             adapter.push(codeLocationIdProvider.lastId) // re-use previous code location
@@ -548,6 +552,7 @@ internal class ManagedStrategyTransformer(
         }
 
         private fun invokeBeforeMethodCall(methodName: String, tracePointLocal: Int) {
+            invokeBeforeEvent()
             loadStrategy()
             loadCurrentThreadNumber()
             loadNewCodeLocationAndTracePoint(tracePointLocal, METHOD_TRACE_POINT_TYPE) { iThread, actorId, callStackTrace, ste ->
@@ -747,6 +752,7 @@ internal class ManagedStrategyTransformer(
 
         // STACK: monitor
         private fun invokeBeforeLockAcquireOrRelease(method: Method, codeLocationConstructor: CodeLocationTracePointConstructor, tracePointType: Type) {
+            invokeBeforeEvent()
             val monitorLocal: Int = adapter.newLocal(OBJECT_TYPE)
             adapter.storeLocal(monitorLocal)
             loadStrategy()
@@ -892,6 +898,7 @@ internal class ManagedStrategyTransformer(
 
         // STACK: monitor
         private fun invokeOnWaitOrNotify(method: Method, flag: Boolean, codeLocationConstructor: CodeLocationTracePointConstructor, tracePointType: Type) {
+            invokeBeforeEvent()
             val monitorLocal: Int = adapter.newLocal(OBJECT_TYPE)
             adapter.storeLocal(monitorLocal)
             loadStrategy()
@@ -950,6 +957,7 @@ internal class ManagedStrategyTransformer(
 
         // STACK: withTimeout
         private fun invokeBeforePark() {
+            invokeBeforeEvent()
             val withTimeoutLocal: Int = adapter.newLocal(Type.BOOLEAN_TYPE)
             adapter.storeLocal(withTimeoutLocal)
             loadStrategy()
@@ -961,6 +969,7 @@ internal class ManagedStrategyTransformer(
 
         // STACK: thread
         private fun invokeAfterUnpark() {
+            invokeBeforeEvent()
             val threadLocal: Int = adapter.newLocal(OBJECT_TYPE)
             adapter.storeLocal(threadLocal)
             loadStrategy()
@@ -1128,12 +1137,14 @@ internal class ManagedStrategyTransformer(
         private var lineNumber = 0
 
         protected fun invokeBeforeIgnoredSectionEntering() {
+            invokeBeforeEvent()
             loadStrategy()
             loadCurrentThreadNumber()
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, ENTER_IGNORED_SECTION_METHOD)
         }
 
         protected fun invokeAfterIgnoredSectionLeaving() {
+            invokeBeforeEvent()
             loadStrategy()
             loadCurrentThreadNumber()
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, LEAVE_IGNORED_SECTION_METHOD)
@@ -1202,6 +1213,14 @@ internal class ManagedStrategyTransformer(
                 null
             }
 
+        protected fun invokeBeforeEvent() {
+            // todo invoke only if in doReplay()
+            if (doReplayInvoked) {
+                adapter.push(eventCounterProvider.nextEventId())
+                adapter.invokeStatic(IDEA_PLUGIN_TYPE, BEFORE_EVENT_METHOD)
+            }
+        }
+
         /**
          * Generated code is equal to
          * ```
@@ -1252,6 +1271,12 @@ internal class CodeLocationIdProvider {
     fun newId() = ++lastId
 }
 
+internal class EventCounterProvider {
+    var lastId = 0
+        private set
+    fun nextEventId() = ++lastId
+}
+
 // By default `java.util` interfaces are not transformed, while classes are.
 // Here are the exceptions to these rules.
 // They were found with the help of the `findAllTransformationProblems` method.
@@ -1291,6 +1316,9 @@ internal val TRANSFORMED_JAVA_UTIL_INTERFACES = setOf(
     "java/util/logging/Filter",
     "java/util/spi/ResourceBundleControlProvider"
 )
+
+private val BEFORE_EVENT_METHOD = Method.getMethod(Class.forName("org.jetbrains.kotlinx.lincheck.IdeaPluginKt").getMethod("beforeEvent", Int::class.java))
+private val IDEA_PLUGIN_TYPE = Type.getType(Class.forName("org.jetbrains.kotlinx.lincheck.IdeaPluginKt"))
 
 private val OBJECT_TYPE = Type.getType(Any::class.java)
 private val THROWABLE_TYPE = Type.getType(java.lang.Throwable::class.java)
