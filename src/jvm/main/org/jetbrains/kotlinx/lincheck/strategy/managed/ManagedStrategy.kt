@@ -303,6 +303,7 @@ abstract class ManagedStrategy(
             val reason = if (isLoop) SwitchReason.ACTIVE_LOCK else SwitchReason.STRATEGY_SWITCH
             switchCurrentThread(iThread, reason)
         }
+        if (collectTrace) beforeEvent(traceCollector!!.trace.size)
         traceCollector?.passCodeLocation(tracePoint)
         // continue the operation
     }
