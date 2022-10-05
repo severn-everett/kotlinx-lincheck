@@ -52,8 +52,9 @@ internal class ModelCheckingStrategy(
         scenario: ExecutionScenario,
         validationFunctions: List<Method>,
         stateRepresentation: Method?,
-        verifier: Verifier
-) : ManagedStrategy(testClass, scenario, verifier, validationFunctions, stateRepresentation, testCfg) {
+        verifier: Verifier,
+        val replay: Boolean
+) : ManagedStrategy(testClass, scenario, verifier, validationFunctions, if (replay) null else stateRepresentation, testCfg) {
     // The number of invocations that the strategy is eligible to use to search for an incorrect execution.
     private val maxInvocations = testCfg.invocationsPerIteration
     // The number of already used invocations.
@@ -67,8 +68,6 @@ internal class ModelCheckingStrategy(
     private val generationRandom = Random(0)
     // The interleaving that will be studied on the next invocation.
     private lateinit var currentInterleaving: Interleaving
-
-    var replay = false
 
     override fun runImpl(): LincheckFailure? {
         while (usedInvocations < maxInvocations) {

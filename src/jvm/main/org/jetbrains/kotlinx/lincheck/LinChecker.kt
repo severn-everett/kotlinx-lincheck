@@ -142,15 +142,17 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
     }
 
     private fun ExecutionScenario.run(testCfg: CTestConfiguration, verifier: Verifier, replay: Boolean = false): LincheckFailure? =
-        testCfg.createStrategy(
+        testCfg.apply {
+            if (replay) {
+                (this as ModelCheckingCTestConfiguration).replay = true
+            }
+        }.createStrategy(
             testClass = testClass,
             scenario = this,
             validationFunctions = testStructure.validationFunctions,
             stateRepresentationMethod = testStructure.stateRepresentation,
             verifier = verifier
-        ).also {
-            if (replay) (it as ModelCheckingStrategy).replay = true
-        }.run()
+        ).run()
 
     private fun ExecutionScenario.copy() = ExecutionScenario(
         ArrayList(initExecution),
