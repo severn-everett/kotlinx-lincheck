@@ -24,7 +24,7 @@ package org.jetbrains.kotlinx.lincheck
 
 // Invoked by Lincheck after the minimization is applied. DO NOT FORGET TO TURN OFF THE RUNNER TIMEOUTS.
 fun testFailed(trace: List<Pair<Int, String>>) {
-
+//    println(trace)
 }
 
 fun replay(): Boolean {

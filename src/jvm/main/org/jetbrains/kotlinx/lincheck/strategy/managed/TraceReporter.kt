@@ -33,12 +33,13 @@ import kotlin.math.min
 internal fun StringBuilder.appendTrace(
     scenario: ExecutionScenario,
     results: ExecutionResult?,
-    trace: Trace
+    trace: Trace,
+    insertTitle: Boolean = true
 ) {
     val startTraceGraphNode = constructTraceGraph(scenario, results, trace)
     val traceRepresentation = traceGraphToRepresentationList(startTraceGraphNode)
     val traceRepresentationSplitted = splitToColumns(scenario.threads, traceRepresentation)
-    appendln("Parallel part trace:")
+    if (insertTitle) appendln("Parallel part trace:")
     append(printInColumnsCustom(traceRepresentationSplitted) {
         StringBuilder().apply {
             for (i in it.indices) {

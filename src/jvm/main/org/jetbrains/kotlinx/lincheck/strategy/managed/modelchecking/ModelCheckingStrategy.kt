@@ -22,8 +22,11 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
 
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.onThreadChange
+import org.jetbrains.kotlinx.lincheck.replay
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck.testFailed
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import java.lang.reflect.*
 import kotlin.random.*
@@ -65,18 +68,37 @@ internal class ModelCheckingStrategy(
     // The interleaving that will be studied on the next invocation.
     private lateinit var currentInterleaving: Interleaving
 
+    var replay = false
+
     override fun runImpl(): LincheckFailure? {
         while (usedInvocations < maxInvocations) {
             // get new unexplored interleaving
             currentInterleaving = root.nextInterleaving() ?: break
             usedInvocations++
             // run invocation and check its results
-            checkResult(runInvocation())?.let { return it }
+            checkResult(runInvocation())?.let {
+                // An error has been detected!
+                // Should we f**cking replay it?
+                if (replay && it.trace != null) {
+                    // TODO support actorsBefore / actorsAfter
+                    val results = if (it is IncorrectResultsFailure) it.results else null
+                    val strings = with(StringBuilder()) {
+                        appendTrace(it.scenario, results, it.trace, insertTitle = false)
+                        toString().split("\n")
+                    }
+                    testFailed(strings.mapIndexed { i, s -> Pair(i, s) })
+                    while (replay()) {
+//                        doReplay() SHOULD ALWAYS COLLECT TRACE
+                    }
+                }
+                return it
+            }
         }
         return null
     }
 
     override fun onNewSwitch(iThread: Int, mustSwitch: Boolean) {
+        onThreadChange()
         if (mustSwitch) {
             // Create new execution position if this is a forced switch.
             // All other execution positions are covered by `shouldSwitch` method,

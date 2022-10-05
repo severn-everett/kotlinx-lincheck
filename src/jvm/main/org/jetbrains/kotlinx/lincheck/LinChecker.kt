@@ -24,6 +24,8 @@ package org.jetbrains.kotlinx.lincheck
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import kotlin.reflect.*
 
@@ -80,6 +82,10 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             if (failure != null) {
                 val minimizedFailedIteration = if (!minimizeFailedScenario) failure
                                                else failure.minimize(this)
+                // Говнокод
+                if (this is ModelCheckingCTestConfiguration) {
+                    scenario.run(this, verifier, replay = true)
+                }
                 reporter.logFailedIteration(minimizedFailedIteration)
                 return minimizedFailedIteration
             }
@@ -135,14 +141,16 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         } else null
     }
 
-    private fun ExecutionScenario.run(testCfg: CTestConfiguration, verifier: Verifier): LincheckFailure? =
+    private fun ExecutionScenario.run(testCfg: CTestConfiguration, verifier: Verifier, replay: Boolean = false): LincheckFailure? =
         testCfg.createStrategy(
             testClass = testClass,
             scenario = this,
             validationFunctions = testStructure.validationFunctions,
             stateRepresentationMethod = testStructure.stateRepresentation,
             verifier = verifier
-        ).run()
+        ).also {
+            if (replay) (it as ModelCheckingStrategy).replay = true
+        }.run()
 
     private fun ExecutionScenario.copy() = ExecutionScenario(
         ArrayList(initExecution),
