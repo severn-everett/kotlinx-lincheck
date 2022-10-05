@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.TransformationClassLoader.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
@@ -45,8 +46,7 @@ internal class ManagedStrategyTransformer(
     private val collectStateRepresentation: Boolean,
     private val constructTraceRepresentation: Boolean,
     private val codeLocationIdProvider: CodeLocationIdProvider,
-    private val eventCounterProvider: EventCounterProvider,
-    private val doReplayInvoked: Boolean
+    private val eventCounterProvider: EventCounterProvider
 ) : ClassVisitor(ASM_API, ClassRemapper(cv, JavaUtilRemapper())) {
     private lateinit var className: String
     private var classVersion = 0
@@ -1214,11 +1214,18 @@ internal class ManagedStrategyTransformer(
             }
 
         protected fun invokeBeforeEvent() {
-            // todo invoke only if in doReplay()
-            if (doReplayInvoked) {
-                adapter.push(eventCounterProvider.nextEventId())
-                adapter.invokeStatic(IDEA_PLUGIN_TYPE, BEFORE_EVENT_METHOD)
-            }
+            val inReplay: Label = adapter.newLabel()
+            val elseLable: Label = adapter.newLabel()
+            loadStrategy()
+            adapter.checkCast(MODEL_CHECKING_STRATEGY_TYPE)
+            adapter.invokeVirtual(MODEL_CHECKING_STRATEGY_TYPE, GET_REPLAY_PROPERTY)
+            adapter.push(true)
+            adapter.ifCmp(Type.BOOLEAN_TYPE, GeneratorAdapter.EQ, inReplay)
+            adapter.goTo(elseLable)
+            visitLabel(inReplay)
+            adapter.push(eventCounterProvider.nextEventId())
+            adapter.invokeStatic(IDEA_PLUGIN_TYPE, BEFORE_EVENT_METHOD)
+            visitLabel(elseLable)
         }
 
         /**
@@ -1324,6 +1331,7 @@ private val OBJECT_TYPE = Type.getType(Any::class.java)
 private val THROWABLE_TYPE = Type.getType(java.lang.Throwable::class.java)
 private val MANAGED_STATE_HOLDER_TYPE = Type.getType(ManagedStrategyStateHolder::class.java)
 private val MANAGED_STRATEGY_TYPE = Type.getType(ManagedStrategy::class.java)
+private val MODEL_CHECKING_STRATEGY_TYPE = Type.getType(ModelCheckingStrategy::class.java)
 private val OBJECT_MANAGER_TYPE = Type.getType(ObjectManager::class.java)
 private val RANDOM_TYPE = Type.getType(Random::class.java)
 private val UNSAFE_HOLDER_TYPE = Type.getType(UnsafeHolder::class.java)
@@ -1372,6 +1380,7 @@ private val INITIALIZE_THROWN_EXCEPTION_METHOD = Method.getMethod(MethodCallTrac
 private val INITIALIZE_PARAMETERS_METHOD = Method.getMethod(MethodCallTracePoint::initializeParameters.javaMethod)
 private val INITIALIZE_OWNER_NAME_METHOD = Method.getMethod(MethodCallTracePoint::initializeOwnerName.javaMethod)
 private val NEXT_INT_METHOD = Method("nextInt", Type.INT_TYPE, emptyArray<Type>())
+private val GET_REPLAY_PROPERTY = Method.getMethod(ModelCheckingStrategy::replay.javaGetter)
 
 private val WRITE_KEYWORDS = listOf("set", "put", "swap", "exchange")
 

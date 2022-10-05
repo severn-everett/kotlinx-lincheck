@@ -104,8 +104,6 @@ abstract class ManagedStrategy(
     // used on resumption, and the trace point before and after the suspension
     // correspond to the same method call in the trace.
     private val suspendedFunctionsStack = Array(nThreads) { mutableListOf<Int>() }
-    // Whether doReplay() is invoked to repeat an interleaving execution.
-    private var doReplayInvoked = false
 
     init {
         runner = createRunner()
@@ -134,8 +132,7 @@ abstract class ManagedStrategy(
         collectStateRepresentation = collectStateRepresentation,
         constructTraceRepresentation = collectTrace,
         codeLocationIdProvider = codeLocationIdProvider,
-        eventCounterProvider = eventCounterProvider,
-        doReplayInvoked = doReplayInvoked
+        eventCounterProvider = eventCounterProvider
     )
 
     override fun needsTransformation(): Boolean = true
@@ -220,7 +217,6 @@ abstract class ManagedStrategy(
         }
         // Re-transform class constructing trace
         collectTrace = true
-        doReplayInvoked = true
         // Replace the current runner with a new one in order to use a new
         // `TransformationClassLoader` with a transformer that inserts the trace collection logic.
         runner.close()
