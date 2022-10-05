@@ -24,6 +24,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.onThreadChange
 import org.jetbrains.kotlinx.lincheck.replay
+import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.testFailed
@@ -86,7 +87,7 @@ internal class ModelCheckingStrategy(
                         toString().split("\n")
                     }
                     testFailed(strings.mapIndexed { i, s -> Pair(i, s) })
-                    doReplay(it)
+                    doReplay(results)
                     while (replay()) {
 //                        doReplay() SHOULD ALWAYS COLLECT TRACE
                     }
@@ -97,10 +98,11 @@ internal class ModelCheckingStrategy(
         return null
     }
 
-    private fun doReplay(firstResults: LincheckFailure): LincheckFailure? {
+    private fun doReplay(firstResults: ExecutionResult?) {
         // todo assert that we got the same results
         // todo always collect trace
-        return checkResult(runInvocation())
+        val invocationResult = runInvocation()
+        check(invocationResult is CompletedInvocationResult && invocationResult.results == firstResults)
     }
 
     override fun onNewSwitch(iThread: Int, mustSwitch: Boolean) {
