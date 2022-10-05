@@ -92,10 +92,17 @@ internal class ModelCheckingStrategy(
                         check(failure.results == (replayedInvocationResult as CompletedInvocationResult).results)
                         val replayedFailure = checkResult(replayedInvocationResult)
                         check(replayedFailure is IncorrectResultsFailure)
+
+                        val stringsReplayed = with(StringBuilder()) {
+                            appendTrace(replayedFailure.scenario, results, replayedFailure.trace!!, insertTitle = false)
+                            toString().split("\n").toTypedArray()
+                        }
+
+                        check(strings.contentEquals(stringsReplayed))
                     }
-                    while (replay()) {
-//                        doReplay() SHOULD ALWAYS COLLECT TRACE
-                    }
+//                    while (replay()) {
+////                        doReplay() SHOULD ALWAYS COLLECT TRACE
+//                    }
                 }
                 return failure
             }
