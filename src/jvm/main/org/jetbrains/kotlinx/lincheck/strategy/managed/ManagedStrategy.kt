@@ -27,6 +27,7 @@ import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.objectweb.asm.*
 import java.io.*
@@ -231,7 +232,7 @@ abstract class ManagedStrategy(
                 appendln(loggedResults.toLincheckFailure(scenario, Trace(traceCollector!!.trace, testCfg.verboseTrace)).toString())
             }.toString()
         }
-        return Trace(traceCollector!!.trace, testCfg.verboseTrace)
+        return Trace(traceCollector!!.trace, testCfg.verboseTrace || (this is ModelCheckingStrategy && this.replay))
     }
 
     /**
