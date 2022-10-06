@@ -55,7 +55,7 @@ internal open class ParallelThreadsRunner(
     private val runnerHash = this.hashCode() // helps to distinguish this runner threads from others
     internal val executor = FixedActiveThreadsExecutor(scenario.threads, runnerHash) // shoukd be closed in `close()`
 
-    private lateinit var testInstance: Any
+    internal lateinit var testInstance: Any
     private lateinit var testThreadExecutions: Array<TestThreadExecution>
 
     private var suspensionPointResults = List(scenario.threads) { t ->

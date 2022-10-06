@@ -58,6 +58,11 @@ import kotlin.coroutines.Continuation
 //    SourceStringReader(visualize(o)).outputImage(FileOutputStream(File("./test.png")))
 //}
 
+fun testObjectPlantUMLVisualisation() =
+    ((ManagedStrategyStateHolder.strategy as ModelCheckingStrategy).runner as ParallelThreadsRunner).testInstance.let {
+        visualize(it)
+    }
+
 fun visualize(obj: Any): String {
     val sb = StringBuilder()
     sb.appendLine("@startuml")
