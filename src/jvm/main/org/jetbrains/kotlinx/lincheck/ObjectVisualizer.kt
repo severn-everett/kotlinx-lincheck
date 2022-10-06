@@ -20,89 +20,19 @@
 
 package org.jetbrains.kotlinx.lincheck
 
-import kotlinx.atomicfu.AtomicInt
-import kotlinx.atomicfu.AtomicRef
-import kotlinx.atomicfu.atomic
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.launch
-import net.sourceforge.plantuml.SourceStringReader
 import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyStateHolder
 import org.jetbrains.kotlinx.lincheck.strategy.managed.getObjectNumber
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
-import java.io.File
-import java.io.FileOutputStream
 import java.lang.reflect.Modifier
 import java.math.BigDecimal
 import java.math.BigInteger
-import java.util.Collections
-import java.util.IdentityHashMap
-import java.util.concurrent.ConcurrentLinkedDeque
-import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicIntegerArray
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater
-import java.util.concurrent.atomic.AtomicLong
-import java.util.concurrent.atomic.AtomicLongFieldUpdater
-import java.util.concurrent.atomic.AtomicReference
-import java.util.concurrent.atomic.AtomicReferenceArray
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
+import java.util.*
+import java.util.concurrent.atomic.*
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.coroutines.Continuation
 
-class LockFreeSet {
-    private val head = Node(Int.MIN_VALUE, null, true) // dummy node
-
-    fun add(key: Int): Boolean {
-        var node = head
-        while (true) {
-            while (true) {
-                node = node.next.value ?: break
-                if (node.key == key) {
-                    return node.isDeleted.compareAndSet(expect = true, update = false)
-                }
-            }
-            val newNode = Node(key, null, false)
-            if (node.next.compareAndSet(null, newNode))
-                return true
-        }
-    }
-
-    fun remove(key: Int): Boolean {
-        var node = head
-        while (true) {
-            val previous = node
-            node = node.next.value ?: break
-            if (node.key == key) {
-                return node.isDeleted.compareAndSet(expect = false, update = true).also { deleted ->
-                    if (deleted) {
-                        previous.next.compareAndSet(node, node.next.value)
-                    }
-                }
-            }
-        }
-        return false
-    }
-
-    // not thread safe
-    fun snapshot(): List<Int> {
-        var node: Node? = head
-        return generateSequence {
-            do {
-                node = node?.next?.value
-            } while (node != null && node?.isDeleted?.value == true)
-            node?.key
-        }.toList().sorted()
-    }
-
-}
-
-private class Node(val key: Int, next: Node?, initialMark: Boolean) {
-    val next = atomic(next)
-    val isDeleted = atomic(initialMark)
-}
-fun main() {
+//fun main() {
 //    val o = Channel<Int>(2)
 //    o.offer(42)
 //    o.offer(43)
@@ -111,12 +41,12 @@ fun main() {
 //    }
 //    Thread.sleep(100)
 
-    val o = LockFreeSet()
-    o.add(42)
+//    val o = LockFreeSet()
+//    o.add(42)
 //    o.add(43)
 //    o.add(45)
-    SourceStringReader(visualize(o)).outputImage(FileOutputStream(File("./test.png")))
-}
+//    SourceStringReader(visualize(o)).outputImage(FileOutputStream(File("./test.png")))
+//}
 
 fun testObjectPlantUMLVisualisation() =
     ((ManagedStrategyStateHolder.strategy as ModelCheckingStrategy).runner as ParallelThreadsRunner).testInstance.let {
