@@ -96,10 +96,6 @@ internal class ModelCheckingStrategy(
                     val strings = with(StringBuilder()) {
                         appendTrace(failure.scenario, results, failure.trace, insertTitle = false)
                         toString().split("\n")
-                    }.map {
-                        val first = it.indexOf("(")
-                        val last = it.lastIndexOf("(")
-                        if (first == last) it else it.substring(0, last)
                     }.toTypedArray()
                     testFailed(strings)
 //                    val replayedInvocationResult = doReplay()
