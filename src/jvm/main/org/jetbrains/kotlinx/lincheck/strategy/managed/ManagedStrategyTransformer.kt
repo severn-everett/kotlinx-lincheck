@@ -325,11 +325,11 @@ internal class ManagedStrategyTransformer(
         private fun invokeBeforeSharedVariableReadOrWrite(
             method: Method, tracePointLocal: Int?, tracePointType: Type, codeLocationConstructor: CodeLocationTracePointConstructor
         ) {
-            invokeBeforeEvent()
             loadStrategy()
             loadCurrentThreadNumber()
             loadNewCodeLocationAndTracePoint(tracePointLocal, tracePointType, codeLocationConstructor)
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, method)
+            invokeBeforeEvent()
         }
 
         // STACK: object
@@ -382,11 +382,12 @@ internal class ManagedStrategyTransformer(
         }
 
         private fun invokeBeforeAtomicMethodCall() {
-            invokeBeforeEvent()
             loadStrategy()
             loadCurrentThreadNumber()
             adapter.push(codeLocationIdProvider.lastId) // re-use previous code location
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_ATOMIC_METHOD_CALL_METHOD)
+            // todo invoke from lincheck
+            invokeBeforeEvent()
         }
     }
 
@@ -551,13 +552,13 @@ internal class ManagedStrategyTransformer(
         }
 
         private fun invokeBeforeMethodCall(methodName: String, tracePointLocal: Int) {
-            invokeBeforeEvent()
             loadStrategy()
             loadCurrentThreadNumber()
             loadNewCodeLocationAndTracePoint(tracePointLocal, METHOD_TRACE_POINT_TYPE) { iThread, actorId, callStackTrace, ste ->
                 MethodCallTracePoint(iThread, actorId, callStackTrace, methodName, ste)
             }
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_METHOD_CALL_METHOD)
+            invokeBeforeEvent()
         }
 
         private fun invokeAfterMethodCall(tracePointLocal: Int) {
@@ -751,7 +752,6 @@ internal class ManagedStrategyTransformer(
 
         // STACK: monitor
         private fun invokeBeforeLockAcquireOrRelease(method: Method, codeLocationConstructor: CodeLocationTracePointConstructor, tracePointType: Type) {
-            invokeBeforeEvent()
             val monitorLocal: Int = adapter.newLocal(OBJECT_TYPE)
             adapter.storeLocal(monitorLocal)
             loadStrategy()
@@ -759,6 +759,8 @@ internal class ManagedStrategyTransformer(
             loadNewCodeLocationAndTracePoint(null, tracePointType, codeLocationConstructor)
             adapter.loadLocal(monitorLocal)
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, method)
+            // todo put them inside lincheck
+            invokeBeforeEvent()
         }
     }
 
@@ -897,7 +899,6 @@ internal class ManagedStrategyTransformer(
 
         // STACK: monitor
         private fun invokeOnWaitOrNotify(method: Method, flag: Boolean, codeLocationConstructor: CodeLocationTracePointConstructor, tracePointType: Type) {
-            invokeBeforeEvent()
             val monitorLocal: Int = adapter.newLocal(OBJECT_TYPE)
             adapter.storeLocal(monitorLocal)
             loadStrategy()
@@ -906,6 +907,8 @@ internal class ManagedStrategyTransformer(
             adapter.loadLocal(monitorLocal)
             adapter.push(flag)
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, method)
+            // todo: put inside lincheck
+            invokeBeforeEvent()
         }
     }
 
@@ -956,7 +959,6 @@ internal class ManagedStrategyTransformer(
 
         // STACK: withTimeout
         private fun invokeBeforePark() {
-            invokeBeforeEvent()
             val withTimeoutLocal: Int = adapter.newLocal(Type.BOOLEAN_TYPE)
             adapter.storeLocal(withTimeoutLocal)
             loadStrategy()
@@ -964,11 +966,12 @@ internal class ManagedStrategyTransformer(
             loadNewCodeLocationAndTracePoint(null, PARK_TRACE_POINT_TYPE, ::ParkTracePoint)
             adapter.loadLocal(withTimeoutLocal)
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_PARK_METHOD)
+            // todo invoke from lincheck
+            invokeBeforeEvent()
         }
 
         // STACK: thread
         private fun invokeAfterUnpark() {
-            invokeBeforeEvent()
             val threadLocal: Int = adapter.newLocal(OBJECT_TYPE)
             adapter.storeLocal(threadLocal)
             loadStrategy()
@@ -976,6 +979,8 @@ internal class ManagedStrategyTransformer(
             loadNewCodeLocationAndTracePoint(null, UNPARK_TRACE_POINT_TYPE, ::UnparkTracePoint)
             adapter.loadLocal(threadLocal)
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, AFTER_UNPARK_METHOD)
+            // todo invoke from lincheck
+            invokeBeforeEvent()
         }
     }
 
@@ -1136,14 +1141,12 @@ internal class ManagedStrategyTransformer(
         private var lineNumber = 0
 
         protected fun invokeBeforeIgnoredSectionEntering() {
-            invokeBeforeEvent()
             loadStrategy()
             loadCurrentThreadNumber()
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, ENTER_IGNORED_SECTION_METHOD)
         }
 
         protected fun invokeAfterIgnoredSectionLeaving() {
-            invokeBeforeEvent()
             loadStrategy()
             loadCurrentThreadNumber()
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, LEAVE_IGNORED_SECTION_METHOD)
@@ -1214,22 +1217,21 @@ internal class ManagedStrategyTransformer(
 
         protected fun invokeBeforeEvent() {
             // if ((strategy as ModelCheckingStrategy).replay) {
-            //    beforeEvent((strategy as ModelCheckingStrategy).eventIdProvider.nextId())
+            //    val eventId = countEventId(threadId + strategy.eventIdProvider.nextId())
+            //    beforeEvent(eventId)
             // }
             val inReplay: Label = adapter.newLabel()
-            val elseLable: Label = adapter.newLabel()
             loadStrategy()
             adapter.checkCast(MODEL_CHECKING_STRATEGY_TYPE)
             adapter.invokeVirtual(MODEL_CHECKING_STRATEGY_TYPE, GET_REPLAY_PROPERTY)
             adapter.push(true)
             adapter.ifCmp(Type.BOOLEAN_TYPE, GeneratorAdapter.EQ, inReplay)
-            adapter.goTo(elseLable)
-            visitLabel(inReplay)
+            adapter.visitLabel(inReplay)
             loadStrategy()
             adapter.checkCast(MODEL_CHECKING_STRATEGY_TYPE)
+            loadCurrentThreadNumber()
             adapter.invokeVirtual(MODEL_CHECKING_STRATEGY_TYPE, GET_NEXT_EVENT_ID_METHOD)
             adapter.invokeStatic(IDEA_PLUGIN_TYPE, BEFORE_EVENT_METHOD)
-            visitLabel(elseLable)
         }
 
         /**

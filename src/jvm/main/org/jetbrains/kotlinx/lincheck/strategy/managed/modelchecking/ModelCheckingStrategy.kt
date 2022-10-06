@@ -78,7 +78,8 @@ internal class ModelCheckingStrategy(
         fun nextId() = ++lastId
     }
 
-    internal fun nextEventId() = eventIdProvider.nextId()
+    internal fun nextEventId(threadId: Int) =
+        threadId * 1_000_000 + eventIdProvider.nextId()
 
     override fun runImpl(): LincheckFailure? {
         while (usedInvocations < maxInvocations) {
