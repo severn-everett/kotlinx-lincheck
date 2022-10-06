@@ -260,6 +260,7 @@ internal open class ParallelThreadsRunner(
                 }
             }
         }
+        onThreadChange()
         val afterInitStateRepresentation = constructStateRepresentation()
         try {
             executor.submitAndAwait(testThreadExecutions, timeoutMs)
@@ -283,6 +284,7 @@ internal open class ParallelThreadsRunner(
         val afterParallelStateRepresentation = constructStateRepresentation()
         val dummyCompletion = Continuation<Any?>(EmptyCoroutineContext) {}
         var postPartSuspended = false
+//        onThreadChange()
         val postResults = scenario.postExecution.mapIndexed { i, postActor ->
             // no actors are executed after suspension of a post part
             val result = if (postPartSuspended) {
