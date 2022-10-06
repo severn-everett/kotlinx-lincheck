@@ -24,6 +24,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.TransformationClassLoader.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import java.math.*
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
@@ -96,7 +97,8 @@ internal class ReadTracePoint(
             append("$fieldName.")
         append("READ")
         append(": ${adornedStringRepresentation(value)}")
-        append(" at ${stackTraceElement.shorten()}")
+        if (!((ManagedStrategyStateHolder.strategy as? ModelCheckingStrategy)?.replay ?: false))
+            append(" at ${stackTraceElement.shorten()}")
     }.toString()
 
     fun initializeReadValue(value: Any?) {
@@ -117,7 +119,8 @@ internal class WriteTracePoint(
             append("$fieldName.")
         append("WRITE(")
         append(adornedStringRepresentation(value))
-        append(") at ${stackTraceElement.shorten()}")
+        if (!((ManagedStrategyStateHolder.strategy as? ModelCheckingStrategy)?.replay ?: false))
+            append(") at ${stackTraceElement.shorten()}")
     }.toString()
 
     fun initializeWrittenValue(value: Any?) {
@@ -149,7 +152,8 @@ internal class MethodCallTracePoint(
             append(": ${adornedStringRepresentation(returnedValue)}")
         else if (thrownException != null && thrownException != ForcibleExecutionFinishException)
             append(": threw ${thrownException!!.javaClass.simpleName}")
-        append(" at ${stackTraceElement.shorten()}")
+        if (!((ManagedStrategyStateHolder.strategy as? ModelCheckingStrategy)?.replay ?: false))
+            append(" at ${stackTraceElement.shorten()}")
     }.toString()
 
     fun initializeReturnedValue(value: Any?) {
@@ -175,7 +179,10 @@ internal class MonitorEnterTracePoint(
     callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
-    override fun toStringImpl(): String = "MONITORENTER at " + stackTraceElement.shorten()
+    override fun toStringImpl(): String = "MONITORENTER at " +
+            if (!((ManagedStrategyStateHolder.strategy as? ModelCheckingStrategy)?.replay ?: false))
+                stackTraceElement.shorten()
+            else ""
 }
 
 internal class MonitorExitTracePoint(
@@ -183,7 +190,11 @@ internal class MonitorExitTracePoint(
     callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
-    override fun toStringImpl(): String = "MONITOREXIT at " + stackTraceElement.shorten()
+    override fun toStringImpl(): String = "MONITOREXIT at " +
+            if (!((ManagedStrategyStateHolder.strategy as? ModelCheckingStrategy)?.replay ?: false))
+                stackTraceElement.shorten()
+            else
+                ""
 }
 
 internal class WaitTracePoint(
@@ -191,7 +202,11 @@ internal class WaitTracePoint(
     callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
-    override fun toStringImpl(): String = "WAIT at " + stackTraceElement.shorten()
+    override fun toStringImpl(): String = "WAIT at " +
+            if (!((ManagedStrategyStateHolder.strategy as? ModelCheckingStrategy)?.replay ?: false))
+                stackTraceElement.shorten()
+            else
+                ""
 }
 
 internal class NotifyTracePoint(
@@ -199,7 +214,11 @@ internal class NotifyTracePoint(
     callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
-    override fun toStringImpl(): String = "NOTIFY at " + stackTraceElement.shorten()
+    override fun toStringImpl(): String = "NOTIFY at " +
+            if (!((ManagedStrategyStateHolder.strategy as? ModelCheckingStrategy)?.replay ?: false))
+                stackTraceElement.shorten()
+            else
+                ""
 }
 
 internal class ParkTracePoint(
@@ -207,7 +226,11 @@ internal class ParkTracePoint(
     callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
-    override fun toStringImpl(): String = "PARK at " + stackTraceElement.shorten()
+    override fun toStringImpl(): String = "PARK at " +
+            if (!((ManagedStrategyStateHolder.strategy as? ModelCheckingStrategy)?.replay ?: false))
+                stackTraceElement.shorten()
+            else
+                ""
 }
 
 internal class UnparkTracePoint(
@@ -215,7 +238,11 @@ internal class UnparkTracePoint(
     callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
-    override fun toStringImpl(): String = "UNPARK at " + stackTraceElement.shorten()
+    override fun toStringImpl(): String = "UNPARK at " +
+            if (!((ManagedStrategyStateHolder.strategy as? ModelCheckingStrategy)?.replay ?: false))
+                stackTraceElement.shorten()
+            else
+                ""
 }
 
 internal class CoroutineCancellationTracePoint(

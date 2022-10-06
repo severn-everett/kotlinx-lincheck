@@ -32,7 +32,7 @@ fun replay(): Boolean {
 }
 
 fun beforeEvent(eventId: Int) {
-    println("$eventId")
+//    println("$eventId")
 }
 
 fun onThreadChange() {}

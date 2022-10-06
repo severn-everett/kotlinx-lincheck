@@ -97,6 +97,7 @@ internal class ModelCheckingStrategy(
                         appendTrace(failure.scenario, results, failure.trace, insertTitle = false)
                         toString().split("\n")
                     }.toTypedArray()
+//                    strings.forEach { println(it) }
                     testFailed(strings)
 //                    val replayedInvocationResult = doReplay()
 //                    if (failure is IncorrectResultsFailure) {
