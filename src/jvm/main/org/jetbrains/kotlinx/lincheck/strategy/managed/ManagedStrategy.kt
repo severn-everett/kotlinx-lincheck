@@ -116,7 +116,9 @@ abstract class ManagedStrategy(
     }
 
     private fun createRunner(): Runner =
-        ManagedStrategyRunner(this, testClass, validationFunctions, stateRepresentationFunction, testCfg.timeoutMs, UseClocks.ALWAYS)
+        ManagedStrategyRunner(this, testClass, validationFunctions, stateRepresentationFunction,
+            if (this is ModelCheckingStrategy && this.replay) Long.MAX_VALUE / 2 else testCfg.timeoutMs,
+            UseClocks.ALWAYS)
 
     private fun initializeManagedState() {
         ManagedStrategyStateHolder.setState(runner.classLoader, this, testClass)
@@ -599,9 +601,7 @@ abstract class ManagedStrategy(
      */
     @Suppress("UNUSED_PARAMETER")
     internal fun beforeMethodCall(iThread: Int, codeLocation: Int, tracePoint: MethodCallTracePoint) {
-        println("WTF")
         if (isTestThread(iThread) && !inIgnoredSection(iThread)) {
-            println("WTF2")
             check(collectTrace) { "This method should be called only when logging is enabled" }
             val callStackTrace = callStackTrace[iThread]
             val suspendedMethodStack = suspendedFunctionsStack[iThread]

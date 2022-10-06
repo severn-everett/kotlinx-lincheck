@@ -256,7 +256,7 @@ private class ActorNode(iThread: Int, last: TraceNode?, verboseTrace: Boolean, c
             lastState?.let { traceRepresentation.add(stateEventRepresentation(iThread, it)) }
             lastInternalEvent.next
         } else {
-            traceRepresentation.add(TraceEventRepresentation(iThread, "$actor"))
+            traceRepresentation.add(TraceEventRepresentation(iThread, "$actor" + if (result != null) ": $result" else ""))
             next
         }
 }

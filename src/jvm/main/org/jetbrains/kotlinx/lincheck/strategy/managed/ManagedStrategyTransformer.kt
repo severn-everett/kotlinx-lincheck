@@ -129,7 +129,7 @@ internal class ManagedStrategyTransformer(
                 GETSTATIC -> {
                     val tracePointLocal = newTracePointLocal()
                     invokeBeforeSharedVariableRead(name, tracePointLocal)
-                    invokeBeforeEvent("getstatic")
+                    invokeBeforeEvent()
                     super.visitFieldInsn(opcode, owner, name, desc)
                     captureReadValue(desc, tracePointLocal)
                 }
@@ -143,7 +143,7 @@ internal class ManagedStrategyTransformer(
                     ifZCmp(GeneratorAdapter.GT, skipCodeLocationBefore)
                     // add strategy invocation only if is not a local object
                     invokeBeforeSharedVariableRead(name, tracePointLocal)
-                    invokeBeforeEvent("getfield")
+                    invokeBeforeEvent()
                     visitLabel(skipCodeLocationBefore)
 
                     super.visitFieldInsn(opcode, owner, name, desc)
@@ -159,7 +159,7 @@ internal class ManagedStrategyTransformer(
                     beforeSharedVariableWrite(name, desc)
                     super.visitFieldInsn(opcode, owner, name, desc)
                     invokeMakeStateRepresentation()
-                    invokeBeforeEvent("putstatic")
+                    invokeBeforeEvent()
                 }
                 PUTFIELD -> {
                     val isLocalObject = newLocal(Type.BOOLEAN_TYPE)
@@ -170,7 +170,7 @@ internal class ManagedStrategyTransformer(
                     ifZCmp(GeneratorAdapter.GT, skipCodeLocationBefore)
                     // add strategy invocation only if is not a local object
                     beforeSharedVariableWrite(name, desc)
-                    invokeBeforeEvent("putfield")
+                    invokeBeforeEvent()
                     visitLabel(skipCodeLocationBefore)
 
                     super.visitFieldInsn(opcode, owner, name, desc)
@@ -199,7 +199,7 @@ internal class ManagedStrategyTransformer(
                     ifZCmp(GeneratorAdapter.GT, skipCodeLocationBefore)
                     // add strategy invocation only if is not a local object
                     invokeBeforeSharedVariableRead(null, tracePointLocal)
-                    invokeBeforeEvent("array load")
+                    invokeBeforeEvent()
                     visitLabel(skipCodeLocationBefore)
 
                     super.visitInsn(opcode)
@@ -219,7 +219,7 @@ internal class ManagedStrategyTransformer(
                     ifZCmp(GeneratorAdapter.GT, skipCodeLocationBefore)
                     // add strategy invocation only if is not a local object
                     beforeSharedVariableWrite(null, getArrayStoreType(opcode).descriptor)
-                    invokeBeforeEvent("array store")
+                    invokeBeforeEvent()
                     visitLabel(skipCodeLocationBefore)
 
                     super.visitInsn(opcode)
@@ -392,7 +392,7 @@ internal class ManagedStrategyTransformer(
             adapter.push(codeLocationIdProvider.lastId) // re-use previous code location
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_ATOMIC_METHOD_CALL_METHOD)
             // todo invoke from lincheck
-            invokeBeforeEvent("atomic")
+            invokeBeforeEvent()
         }
     }
 
@@ -428,7 +428,7 @@ internal class ManagedStrategyTransformer(
         private val isSuspendStateMachine by lazy { isSuspendStateMachine(className) }
 
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
-            if (isSuspendStateMachine || isStrategyMethod(owner) || isInternalCoroutineCall(owner, name)) {
+            if (isSuspendStateMachine || isStrategyMethod(owner) || isInternalCoroutineCall(owner, name) || name == "<init>") {
                 visitMethodInsn(opcode, owner, name, desc, itf)
                 return
             }
@@ -563,7 +563,7 @@ internal class ManagedStrategyTransformer(
                 MethodCallTracePoint(iThread, actorId, callStackTrace, methodName, ste)
             }
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_METHOD_CALL_METHOD)
-            invokeBeforeEvent("method call $className.$methodName")
+            invokeBeforeEvent()
         }
 
         private fun invokeAfterMethodCall(tracePointLocal: Int) {
@@ -765,7 +765,7 @@ internal class ManagedStrategyTransformer(
             adapter.loadLocal(monitorLocal)
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, method)
             // todo put them inside lincheck
-            invokeBeforeEvent("beforeLockAcquireOrRelease")
+            invokeBeforeEvent()
         }
     }
 
@@ -913,7 +913,7 @@ internal class ManagedStrategyTransformer(
             adapter.push(flag)
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, method)
             // todo: put inside lincheck
-            invokeBeforeEvent("waitOrNotify")
+            invokeBeforeEvent()
         }
     }
 
@@ -972,7 +972,7 @@ internal class ManagedStrategyTransformer(
             adapter.loadLocal(withTimeoutLocal)
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_PARK_METHOD)
             // todo invoke from lincheck
-            invokeBeforeEvent("park")
+            invokeBeforeEvent()
         }
 
         // STACK: thread
@@ -985,7 +985,7 @@ internal class ManagedStrategyTransformer(
             adapter.loadLocal(threadLocal)
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, AFTER_UNPARK_METHOD)
             // todo invoke from lincheck
-            invokeBeforeEvent("unpark")
+            invokeBeforeEvent()
         }
     }
 
@@ -1220,7 +1220,7 @@ internal class ManagedStrategyTransformer(
                 null
             }
 
-        protected fun invokeBeforeEvent(type: String) {
+        protected fun invokeBeforeEvent() {
             // if ((strategy as ModelCheckingStrategy).replay) {
             //    val eventId = countEventId(threadId + strategy.eventIdProvider.nextId())
             //    beforeEvent(eventId)
@@ -1238,9 +1238,7 @@ internal class ManagedStrategyTransformer(
 
             loadStrategy()
             adapter.checkCast(MODEL_CHECKING_STRATEGY_TYPE)
-            loadCurrentThreadNumber()
             adapter.invokeVirtual(MODEL_CHECKING_STRATEGY_TYPE, GET_NEXT_EVENT_ID_METHOD)
-            adapter.push(type)
             adapter.invokeStatic(IDEA_PLUGIN_TYPE, BEFORE_EVENT_METHOD)
 
             adapter.visitLabel(inReplayEnd)
@@ -1336,7 +1334,7 @@ internal val TRANSFORMED_JAVA_UTIL_INTERFACES = setOf(
     "java/util/spi/ResourceBundleControlProvider"
 )
 
-private val BEFORE_EVENT_METHOD = Method.getMethod(Class.forName("org.jetbrains.kotlinx.lincheck.IdeaPluginKt").getMethod("beforeEvent", Int::class.java, String::class.java))
+private val BEFORE_EVENT_METHOD = Method.getMethod(Class.forName("org.jetbrains.kotlinx.lincheck.IdeaPluginKt").getMethod("beforeEvent", Int::class.java))
 private val IDEA_PLUGIN_TYPE = Type.getType(Class.forName("org.jetbrains.kotlinx.lincheck.IdeaPluginKt"))
 
 private val OBJECT_TYPE = Type.getType(Any::class.java)
@@ -1508,6 +1506,7 @@ private fun isSuspendStateMachine(internalClassName: String): Boolean {
 }
 
 private fun isStrategyMethod(className: String) = className.startsWith("org/jetbrains/kotlinx/lincheck/strategy")
+        || className == "org/jetbrains/kotlinx/lincheck/IdeaPluginKt"
 
 private fun isAFU(owner: String) = owner.startsWith("java/util/concurrent/atomic/Atomic") && owner.endsWith("FieldUpdater")
 

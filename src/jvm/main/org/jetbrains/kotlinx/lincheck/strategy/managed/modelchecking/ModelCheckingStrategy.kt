@@ -82,8 +82,8 @@ internal class ModelCheckingStrategy(
         fun nextId() = ++lastId
     }
 
-    internal fun nextEventId(threadId: Int) =
-        threadId * 1_000_000 + eventIdProvider.nextId()
+    internal fun nextEventId() =
+        eventIdProvider.nextId()
 
     override fun runImpl(): LincheckFailure? {
         while (usedInvocations < maxInvocations) {
@@ -99,7 +99,11 @@ internal class ModelCheckingStrategy(
                     val results = if (failure is IncorrectResultsFailure) failure.results else null
                     val strings = with(StringBuilder()) {
                         appendTrace(failure.scenario, results, failure.trace, insertTitle = false)
-                        toString().split("\n")
+                        toString().split("\n").filter {
+                            !it.contains("|   thread is finished") &&
+                            !it.contains(Regex("\\|( )+switch")) &&
+                            !it.contains(Regex("\\|( )+result:"))
+                        }
                     }.toTypedArray()
 //                    strings.forEach { println(it) }
                     testFailed(strings)
@@ -120,10 +124,7 @@ internal class ModelCheckingStrategy(
                     println()
                     println()
                     println()
-                    println()
-                    val sb = StringBuilder()
-                    sb.appendTrace(scenario, results, failure.trace)
-                    println(sb)
+                    println(strings.joinToString(separator = "\n"))
                     doReplay()
                     while (replay()) {
                         doReplay()
