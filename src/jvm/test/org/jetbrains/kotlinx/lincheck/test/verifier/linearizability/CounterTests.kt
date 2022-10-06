@@ -50,6 +50,10 @@ interface Counter {
 private class CounterWrong0 : Counter {
     private var c: Int = 0
 
+    init {
+        Thread.currentThread()
+    }
+
     override fun incAndGet(): Int = ++c
     override fun get(): Int = c
 }

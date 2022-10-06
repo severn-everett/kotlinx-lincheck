@@ -72,6 +72,10 @@ internal class ModelCheckingStrategy(
 
     private var eventIdProvider = EventCounterProvider()
 
+    val shouldInvokeBeforeEvent get() =
+        Thread.currentThread() is FixedActiveThreadsExecutor.TestThread &&
+            !inIgnoredSection((Thread.currentThread() as FixedActiveThreadsExecutor.TestThread).iThread)
+
     private class EventCounterProvider {
         var lastId = 0
             private set
@@ -110,6 +114,16 @@ internal class ModelCheckingStrategy(
 //                        }
 //                        check(strings.contentEquals(stringsReplayed))
 //                    }
+                    println()
+                    println()
+                    println()
+                    println()
+                    println()
+                    println()
+                    println()
+                    val sb = StringBuilder()
+                    sb.appendTrace(scenario, results, failure.trace)
+                    println(sb)
                     doReplay()
                     while (replay()) {
                         doReplay()

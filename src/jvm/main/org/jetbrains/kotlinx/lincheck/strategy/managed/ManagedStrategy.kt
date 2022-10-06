@@ -409,7 +409,7 @@ abstract class ManagedStrategy(
      * The execution in an ignored section (added by transformer) or not in a test thread must not add switch points.
      * Additionally, after [ForcibleExecutionFinishException] everything is ignored.
      */
-    private fun inIgnoredSection(iThread: Int): Boolean =
+    internal fun inIgnoredSection(iThread: Int): Boolean =
         !isTestThread(iThread) || ignoredSectionDepth[iThread] > 0 || suddenInvocationResult != null
 
     // == LISTENING METHODS ==
@@ -599,7 +599,9 @@ abstract class ManagedStrategy(
      */
     @Suppress("UNUSED_PARAMETER")
     internal fun beforeMethodCall(iThread: Int, codeLocation: Int, tracePoint: MethodCallTracePoint) {
+        println("WTF")
         if (isTestThread(iThread) && !inIgnoredSection(iThread)) {
+            println("WTF2")
             check(collectTrace) { "This method should be called only when logging is enabled" }
             val callStackTrace = callStackTrace[iThread]
             val suspendedMethodStack = suspendedFunctionsStack[iThread]
