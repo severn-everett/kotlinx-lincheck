@@ -35,6 +35,7 @@ fun beforeEvent(eventId: Int) {
     runCatching {
         visualizeInstance(testObjectPlantUMLVisualisation())
     }
+//    println(eventId)
 }
 
 fun visualizeInstance(s: String) {}

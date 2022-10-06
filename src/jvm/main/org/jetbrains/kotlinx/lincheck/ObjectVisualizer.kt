@@ -106,7 +106,16 @@ private fun visualize(obj: Any, sb: StringBuilder, visualized: MutableSet<Any>) 
             val toVisualize = ArrayList<Any>()
             obj.forEachIndexed { i, o ->
                 // TODO support arrays properly
-                sb.appendLine("$i => ${stringRepresentation(o) ?: o}")
+                if (o == null) {
+                    sb.appendLine("$i => null")
+                } else {
+                    val s = stringRepresentation(o)
+                    if (s != null) {
+                        sb.appendLine("$i => $s")
+                    } else {
+                        sb.appendLine("$i => ${title(o)}")
+                    }
+                }
             }
             toVisualize.forEach { visualize(it, sb, visualized) }
         }
@@ -158,7 +167,6 @@ private fun visualize(obj: Any, sb: StringBuilder, visualized: MutableSet<Any>) 
                     }
                 }
             } catch (e: Throwable) {
-                println(f.name)
                 e.printStackTrace()
                 // Ignore
             }

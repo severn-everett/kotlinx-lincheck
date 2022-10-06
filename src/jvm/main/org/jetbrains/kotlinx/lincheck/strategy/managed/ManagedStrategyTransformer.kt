@@ -1507,6 +1507,7 @@ private fun isSuspendStateMachine(internalClassName: String): Boolean {
 
 private fun isStrategyMethod(className: String) = className.startsWith("org/jetbrains/kotlinx/lincheck/strategy")
         || className == "org/jetbrains/kotlinx/lincheck/IdeaPluginKt"
+        || className == "org/jetbrains/kotlinx/lincheck/ObjectVisualizerKt"
 
 private fun isAFU(owner: String) = owner.startsWith("java/util/concurrent/atomic/Atomic") && owner.endsWith("FieldUpdater")
 

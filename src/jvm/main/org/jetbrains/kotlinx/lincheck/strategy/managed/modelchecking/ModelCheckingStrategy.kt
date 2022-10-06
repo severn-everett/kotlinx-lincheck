@@ -123,7 +123,7 @@ internal class ModelCheckingStrategy(
 //                    println()
 //                    println()
 //                    println()
-//                    println()
+//                    println(strings.size)
 //                    println(strings.joinToString(separator = "\n"))
                     doReplay()
                     while (replay()) {
