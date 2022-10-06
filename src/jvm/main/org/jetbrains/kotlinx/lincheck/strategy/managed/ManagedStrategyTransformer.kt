@@ -131,6 +131,7 @@ internal class ManagedStrategyTransformer(
                     invokeBeforeSharedVariableRead(name, tracePointLocal)
                     super.visitFieldInsn(opcode, owner, name, desc)
                     captureReadValue(desc, tracePointLocal)
+                    invokeBeforeEvent()
                 }
                 GETFIELD -> {
                     val isLocalObject = newLocal(Type.BOOLEAN_TYPE)
@@ -142,6 +143,7 @@ internal class ManagedStrategyTransformer(
                     ifZCmp(GeneratorAdapter.GT, skipCodeLocationBefore)
                     // add strategy invocation only if is not a local object
                     invokeBeforeSharedVariableRead(name, tracePointLocal)
+                    invokeBeforeEvent()
                     visitLabel(skipCodeLocationBefore)
 
                     super.visitFieldInsn(opcode, owner, name, desc)
@@ -157,6 +159,7 @@ internal class ManagedStrategyTransformer(
                     beforeSharedVariableWrite(name, desc)
                     super.visitFieldInsn(opcode, owner, name, desc)
                     invokeMakeStateRepresentation()
+                    invokeBeforeEvent()
                 }
                 PUTFIELD -> {
                     val isLocalObject = newLocal(Type.BOOLEAN_TYPE)
@@ -167,6 +170,7 @@ internal class ManagedStrategyTransformer(
                     ifZCmp(GeneratorAdapter.GT, skipCodeLocationBefore)
                     // add strategy invocation only if is not a local object
                     beforeSharedVariableWrite(name, desc)
+                    invokeBeforeEvent()
                     visitLabel(skipCodeLocationBefore)
 
                     super.visitFieldInsn(opcode, owner, name, desc)
@@ -195,6 +199,7 @@ internal class ManagedStrategyTransformer(
                     ifZCmp(GeneratorAdapter.GT, skipCodeLocationBefore)
                     // add strategy invocation only if is not a local object
                     invokeBeforeSharedVariableRead(null, tracePointLocal)
+                    invokeBeforeEvent()
                     visitLabel(skipCodeLocationBefore)
 
                     super.visitInsn(opcode)
@@ -203,6 +208,7 @@ internal class ManagedStrategyTransformer(
                     loadLocal(isLocalObject)
                     ifZCmp(GeneratorAdapter.GT, skipCodeLocationAfter)
                     captureReadValue(getArrayLoadType(opcode).descriptor, tracePointLocal)
+                    invokeBeforeEvent()
                     visitLabel(skipCodeLocationAfter)
                 }
                 AASTORE, IASTORE, FASTORE, BASTORE, CASTORE, SASTORE, LASTORE, DASTORE -> {
@@ -214,6 +220,7 @@ internal class ManagedStrategyTransformer(
                     ifZCmp(GeneratorAdapter.GT, skipCodeLocationBefore)
                     // add strategy invocation only if is not a local object
                     beforeSharedVariableWrite(null, getArrayStoreType(opcode).descriptor)
+                    invokeBeforeEvent()
                     visitLabel(skipCodeLocationBefore)
 
                     super.visitInsn(opcode)
@@ -329,7 +336,6 @@ internal class ManagedStrategyTransformer(
             loadCurrentThreadNumber()
             loadNewCodeLocationAndTracePoint(tracePointLocal, tracePointType, codeLocationConstructor)
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, method)
-            invokeBeforeEvent()
         }
 
         // STACK: object
