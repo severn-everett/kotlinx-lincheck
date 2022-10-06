@@ -118,13 +118,13 @@ internal class ModelCheckingStrategy(
 //                        }
 //                        check(strings.contentEquals(stringsReplayed))
 //                    }
-                    println()
-                    println()
-                    println()
-                    println()
-                    println()
-                    println()
-                    println(strings.joinToString(separator = "\n"))
+//                    println()
+//                    println()
+//                    println()
+//                    println()
+//                    println()
+//                    println()
+//                    println(strings.joinToString(separator = "\n"))
                     doReplay()
                     while (replay()) {
                         doReplay()
