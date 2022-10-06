@@ -119,8 +119,9 @@ internal class WriteTracePoint(
             append("$fieldName.")
         append("WRITE(")
         append(adornedStringRepresentation(value))
+        append(")")
         if (!((ManagedStrategyStateHolder.strategy as? ModelCheckingStrategy)?.replay ?: false))
-            append(") at ${stackTraceElement.shorten()}")
+            append(" at ${stackTraceElement.shorten()}")
     }.toString()
 
     fun initializeWrittenValue(value: Any?) {
