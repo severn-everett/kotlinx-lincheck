@@ -45,8 +45,7 @@ internal class ManagedStrategyTransformer(
     private val eliminateLocalObjects: Boolean,
     private val collectStateRepresentation: Boolean,
     private val constructTraceRepresentation: Boolean,
-    private val codeLocationIdProvider: CodeLocationIdProvider,
-    private val eventCounterProvider: EventCounterProvider
+    private val codeLocationIdProvider: CodeLocationIdProvider
 ) : ClassVisitor(ASM_API, ClassRemapper(cv, JavaUtilRemapper())) {
     private lateinit var className: String
     private var classVersion = 0
@@ -1214,6 +1213,9 @@ internal class ManagedStrategyTransformer(
             }
 
         protected fun invokeBeforeEvent() {
+            // if ((strategy as ModelCheckingStrategy).replay) {
+            //    beforeEvent((strategy as ModelCheckingStrategy).eventIdProvider.nextId())
+            // }
             val inReplay: Label = adapter.newLabel()
             val elseLable: Label = adapter.newLabel()
             loadStrategy()
@@ -1223,7 +1225,9 @@ internal class ManagedStrategyTransformer(
             adapter.ifCmp(Type.BOOLEAN_TYPE, GeneratorAdapter.EQ, inReplay)
             adapter.goTo(elseLable)
             visitLabel(inReplay)
-            adapter.push(eventCounterProvider.nextEventId())
+            loadStrategy()
+            adapter.checkCast(MODEL_CHECKING_STRATEGY_TYPE)
+            adapter.invokeVirtual(MODEL_CHECKING_STRATEGY_TYPE, GET_NEXT_EVENT_ID_METHOD)
             adapter.invokeStatic(IDEA_PLUGIN_TYPE, BEFORE_EVENT_METHOD)
             visitLabel(elseLable)
         }
@@ -1276,12 +1280,6 @@ internal class CodeLocationIdProvider {
     var lastId = -1 // the first id will be zero
         private set
     fun newId() = ++lastId
-}
-
-internal class EventCounterProvider {
-    var lastId = 0
-        private set
-    fun nextEventId() = ++lastId
 }
 
 // By default `java.util` interfaces are not transformed, while classes are.
@@ -1381,6 +1379,7 @@ private val INITIALIZE_PARAMETERS_METHOD = Method.getMethod(MethodCallTracePoint
 private val INITIALIZE_OWNER_NAME_METHOD = Method.getMethod(MethodCallTracePoint::initializeOwnerName.javaMethod)
 private val NEXT_INT_METHOD = Method("nextInt", Type.INT_TYPE, emptyArray<Type>())
 private val GET_REPLAY_PROPERTY = Method.getMethod(ModelCheckingStrategy::replay.javaGetter)
+private val GET_NEXT_EVENT_ID_METHOD = Method.getMethod(ModelCheckingStrategy::nextEventId.javaMethod)
 
 private val WRITE_KEYWORDS = listOf("set", "put", "swap", "exchange")
 

@@ -60,8 +60,6 @@ abstract class ManagedStrategy(
     // to keep them different in different code locations.
     private val codeLocationIdProvider = CodeLocationIdProvider()
 
-    private val eventCounterProvider = EventCounterProvider()
-
     // == EXECUTION CONTROL FIELDS ==
 
     // Which thread is allowed to perform operations?
@@ -131,8 +129,7 @@ abstract class ManagedStrategy(
         eliminateLocalObjects = testCfg.eliminateLocalObjects,
         collectStateRepresentation = collectStateRepresentation,
         constructTraceRepresentation = collectTrace,
-        codeLocationIdProvider = codeLocationIdProvider,
-        eventCounterProvider = eventCounterProvider
+        codeLocationIdProvider = codeLocationIdProvider
     )
 
     override fun needsTransformation(): Boolean = true
@@ -180,7 +177,6 @@ abstract class ManagedStrategy(
         callStackTrace.forEach { it.clear() }
         suspendedFunctionsStack.forEach { it.clear() }
         ManagedStrategyStateHolder.resetState(runner.classLoader, testClass)
-        var nextEventIndex = 0
     }
 
     // == BASIC STRATEGY METHODS ==
