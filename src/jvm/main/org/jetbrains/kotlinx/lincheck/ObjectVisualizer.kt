@@ -22,16 +22,10 @@ package org.jetbrains.kotlinx.lincheck
 
 import kotlinx.atomicfu.AtomicInt
 import kotlinx.atomicfu.AtomicRef
-import net.sourceforge.plantuml.SourceStringReader
-import net.sourceforge.plantuml.api.PlantumlUtils
-import net.sourceforge.plantuml.project.PlanUtils
-import net.sourceforge.plantuml.security.SFile
 import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyStateHolder
 import org.jetbrains.kotlinx.lincheck.strategy.managed.getObjectNumber
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
-import java.io.File
-import java.io.FileOutputStream
 import java.lang.reflect.Modifier
 import java.math.BigDecimal
 import java.math.BigInteger
@@ -139,10 +133,10 @@ private fun visualize(obj: Any, sb: StringBuilder, visualized: MutableSet<Any>) 
                 if (value is AtomicLong) value = value.get()
                 if (value is AtomicReference<*>) value = value.get()
                 if (value is AtomicBoolean) value = value.get()
-                if (value is AtomicRef<*>) value = value.value
-                if (value is AtomicInt) value = value.value
-                if (value is kotlinx.atomicfu.AtomicLong) value = value.value
-                if (value is kotlinx.atomicfu.AtomicBoolean) value = value.value
+                if (value is AtomicRef<*>) value = value.javaClass.getField("value").get(value)
+                if (value is AtomicInt) value = value.javaClass.getField("value").get(value)
+                if (value is kotlinx.atomicfu.AtomicLong) value = value.javaClass.getField("value").get(value)
+                if (value is kotlinx.atomicfu.AtomicBoolean) value = value.javaClass.getField("value").get(value)
 
                 if (value is AtomicIntegerArray) value = (0..value.length()).map { (value as AtomicIntegerArray).get(it) }.toIntArray()
                 if (value is AtomicReferenceArray<*>) value = (0..value.length()).map { (value as AtomicReferenceArray<*>).get(it) }.toTypedArray()
