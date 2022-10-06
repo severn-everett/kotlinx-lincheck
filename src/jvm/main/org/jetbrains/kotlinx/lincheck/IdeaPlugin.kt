@@ -33,6 +33,11 @@ fun replay(): Boolean {
 
 fun beforeEvent(eventId: Int) {
 //    println("$eventId")
+    runCatching {
+        visualizeInstance(testObjectPlantUMLVisualisation())
+    }
 }
+
+fun visualizeInstance(s: String) {}
 
 fun onThreadChange() {}
