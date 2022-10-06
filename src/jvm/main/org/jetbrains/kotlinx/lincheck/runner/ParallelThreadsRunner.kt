@@ -143,6 +143,8 @@ internal open class ParallelThreadsRunner(
     }
 
     private fun reset() {
+        // Do not let visualization see previous object
+        testInstance = Any()
         testInstance = testClass.newInstance()
         testThreadExecutions.forEachIndexed { t, ex ->
             ex.testInstance = testInstance
