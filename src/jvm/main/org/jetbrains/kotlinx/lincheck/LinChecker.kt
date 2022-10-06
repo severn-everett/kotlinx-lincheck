@@ -84,9 +84,11 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
                                                else failure.minimize(this)
                 // Говнокод
                 if (this is ModelCheckingCTestConfiguration) {
+                    reporter.logFailedIterationWarn(minimizedFailedIteration)
                     scenario.run(this, verifier, replay = true)
+                } else {
+                    reporter.logFailedIteration(minimizedFailedIteration)
                 }
-                reporter.logFailedIteration(minimizedFailedIteration)
                 return minimizedFailedIteration
             }
         }
