@@ -22,10 +22,17 @@ package org.jetbrains.kotlinx.lincheck
 
 import kotlinx.atomicfu.AtomicInt
 import kotlinx.atomicfu.AtomicRef
+import kotlinx.atomicfu.atomic
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
+import net.sourceforge.plantuml.SourceStringReader
 import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyStateHolder
 import org.jetbrains.kotlinx.lincheck.strategy.managed.getObjectNumber
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
+import java.io.File
+import java.io.FileOutputStream
 import java.lang.reflect.Modifier
 import java.math.BigDecimal
 import java.math.BigInteger
@@ -44,13 +51,72 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.coroutines.Continuation
 
-//fun main() {
-//    val o = ConcurrentLinkedDeque<Int>()
-//    o.add(42)
+class LockFreeSet {
+    private val head = Node(Int.MIN_VALUE, null, true) // dummy node
+
+    fun add(key: Int): Boolean {
+        var node = head
+        while (true) {
+            while (true) {
+                node = node.next.value ?: break
+                if (node.key == key) {
+                    return node.isDeleted.compareAndSet(expect = true, update = false)
+                }
+            }
+            val newNode = Node(key, null, false)
+            if (node.next.compareAndSet(null, newNode))
+                return true
+        }
+    }
+
+    fun remove(key: Int): Boolean {
+        var node = head
+        while (true) {
+            val previous = node
+            node = node.next.value ?: break
+            if (node.key == key) {
+                return node.isDeleted.compareAndSet(expect = false, update = true).also { deleted ->
+                    if (deleted) {
+                        previous.next.compareAndSet(node, node.next.value)
+                    }
+                }
+            }
+        }
+        return false
+    }
+
+    // not thread safe
+    fun snapshot(): List<Int> {
+        var node: Node? = head
+        return generateSequence {
+            do {
+                node = node?.next?.value
+            } while (node != null && node?.isDeleted?.value == true)
+            node?.key
+        }.toList().sorted()
+    }
+
+}
+
+private class Node(val key: Int, next: Node?, initialMark: Boolean) {
+    val next = atomic(next)
+    val isDeleted = atomic(initialMark)
+}
+fun main() {
+//    val o = Channel<Int>(2)
+//    o.offer(42)
+//    o.offer(43)
+//    GlobalScope.launch {
+//        o.send(44)
+//    }
+//    Thread.sleep(100)
+
+    val o = LockFreeSet()
+    o.add(42)
 //    o.add(43)
-//    o.add(44)
-//    SourceStringReader(visualize(o)).outputImage(FileOutputStream(File("./test.png")))
-//}
+//    o.add(45)
+    SourceStringReader(visualize(o)).outputImage(FileOutputStream(File("./test.png")))
+}
 
 fun testObjectPlantUMLVisualisation() =
     ((ManagedStrategyStateHolder.strategy as ModelCheckingStrategy).runner as ParallelThreadsRunner).testInstance.let {
@@ -127,16 +193,16 @@ private fun visualize(obj: Any, sb: StringBuilder, visualized: MutableSet<Any>) 
             try {
                 f.isAccessible = true
                 val fieldName = f.name
-                var value = f.get(obj)
+                var value: Any? = f.get(obj)
 
                 if (value is AtomicInteger) value = value.get()
                 if (value is AtomicLong) value = value.get()
                 if (value is AtomicReference<*>) value = value.get()
                 if (value is AtomicBoolean) value = value.get()
-                if (value is AtomicRef<*>) value = value.javaClass.getField("value").get(value)
-                if (value is AtomicInt) value = value.javaClass.getField("value").get(value)
-                if (value is kotlinx.atomicfu.AtomicLong) value = value.javaClass.getField("value").get(value)
-                if (value is kotlinx.atomicfu.AtomicBoolean) value = value.javaClass.getField("value").get(value)
+                if (value?.javaClass?.canonicalName == "kotlinx.atomicfu.AtomicRef") value = value.javaClass.getDeclaredField("value").apply { isAccessible = true }.get(value)
+                if (value?.javaClass?.canonicalName == "kotlinx.atomicfu.AtomicInt") value = value.javaClass.getDeclaredField("value").apply { isAccessible = true }.get(value)
+                if (value?.javaClass?.canonicalName == "kotlinx.atomicfu.AtomicLong") value = value.javaClass.getDeclaredField("value").apply { isAccessible = true }.get(value)
+                if (value?.javaClass?.canonicalName == "kotlinx.atomicfu.AtomicBoolean") value = value.javaClass.getDeclaredField("_value").apply { isAccessible = true }.get(value)
 
                 if (value is AtomicIntegerArray) value = (0..value.length()).map { (value as AtomicIntegerArray).get(it) }.toIntArray()
                 if (value is AtomicReferenceArray<*>) value = (0..value.length()).map { (value as AtomicReferenceArray<*>).get(it) }.toTypedArray()
@@ -152,12 +218,18 @@ private fun visualize(obj: Any, sb: StringBuilder, visualized: MutableSet<Any>) 
                     if (stringValue != null) {
                         sb.appendLine("$name : $fieldName = $stringValue")
                     } else {
-                        val valueTitle = name(value)
-                        visualize(value, sb, visualized)
-                        sb.appendLine("$name --> $valueTitle : $fieldName")
+                        if (value == null) {
+                            sb.appendLine("$name --> $fieldName = null")
+                        } else {
+                            val valueTitle = name(value)
+                            visualize(value, sb, visualized)
+                            sb.appendLine("$name --> $valueTitle : $fieldName")
+                        }
                     }
                 }
             } catch (e: Throwable) {
+                println(f.name)
+                e.printStackTrace()
                 // Ignore
             }
         }
