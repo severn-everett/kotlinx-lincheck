@@ -22,18 +22,22 @@ package org.jetbrains.kotlinx.lincheck
 
 import kotlinx.atomicfu.AtomicInt
 import kotlinx.atomicfu.AtomicRef
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.launch
+import net.sourceforge.plantuml.SourceStringReader
+import net.sourceforge.plantuml.api.PlantumlUtils
+import net.sourceforge.plantuml.project.PlanUtils
+import net.sourceforge.plantuml.security.SFile
 import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyStateHolder
 import org.jetbrains.kotlinx.lincheck.strategy.managed.getObjectNumber
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
+import java.io.File
+import java.io.FileOutputStream
 import java.lang.reflect.Modifier
 import java.math.BigDecimal
 import java.math.BigInteger
 import java.util.Collections
 import java.util.IdentityHashMap
+import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicIntegerArray
@@ -46,16 +50,13 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.coroutines.Continuation
 
-fun main() {
-    val o = Channel<String>(2)
-    o.offer("aaa")
-    o.offer("bbb")
-    GlobalScope.launch {
-        o.send("ccc")
-    }
-    Thread.sleep(100)
-    println(visualize(o))
-}
+//fun main() {
+//    val o = ConcurrentLinkedDeque<Int>()
+//    o.add(42)
+//    o.add(43)
+//    o.add(44)
+//    SourceStringReader(visualize(o)).outputImage(FileOutputStream(File("./test.png")))
+//}
 
 fun visualize(obj: Any): String {
     val sb = StringBuilder()
@@ -82,11 +83,37 @@ private fun visualize(obj: Any, sb: StringBuilder, visualized: MutableSet<Any>) 
             obj.forEachIndexed { i, o ->
                 sb.appendLine("$i => $o")
             }
-        } else if (obj is Array<*>) {
+        } else if (obj is LongArray) {
             obj.forEachIndexed { i, o ->
-                // TODO
-                sb.appendLine("$i => ${o.toString()}")
+                sb.appendLine("$i => $o")
             }
+        } else if (obj is ByteArray) {
+            obj.forEachIndexed { i, o ->
+                sb.appendLine("$i => $o")
+            }
+        } else if (obj is CharArray) {
+            obj.forEachIndexed { i, o ->
+                sb.appendLine("$i => $o")
+            }
+        } else if (obj is BooleanArray) {
+            obj.forEachIndexed { i, o ->
+                sb.appendLine("$i => $o")
+            }
+        } else if (obj is FloatArray) {
+            obj.forEachIndexed { i, o ->
+                sb.appendLine("$i => $o")
+            }
+        } else if (obj is DoubleArray) {
+            obj.forEachIndexed { i, o ->
+                sb.appendLine("$i => $o")
+            }
+        } else if (obj is Array<*>) {
+            val toVisualize = ArrayList<Any>()
+            obj.forEachIndexed { i, o ->
+                // TODO support arrays properly
+                sb.appendLine("$i => ${stringRepresentation(o) ?: o}")
+            }
+            toVisualize.forEach { visualize(it, sb, visualized) }
         }
         sb.appendLine("}")
         return
@@ -94,7 +121,7 @@ private fun visualize(obj: Any, sb: StringBuilder, visualized: MutableSet<Any>) 
     sb.appendLine("object \"$title\" as $name")
     while (clazz != null) {
         clazz.declaredFields.filter { f ->
-            !Modifier.isStatic(f.modifiers)
+            !Modifier.isStatic(f.modifiers) &&
             !f.isEnumConstant &&
             f.name != "serialVersionUID"
         }.forEach { f ->
@@ -120,7 +147,7 @@ private fun visualize(obj: Any, sb: StringBuilder, visualized: MutableSet<Any>) 
                 } else if (value is AtomicReferenceFieldUpdater<*,*> || value is AtomicIntegerFieldUpdater<*> || value is AtomicLongFieldUpdater<*>) {
                     // Ignore
                 } else if (value is ReentrantLock) {
-                    sb.appendLine("$name : $fieldName = ReentrantLock")
+                    sb.appendLine("$name : $fieldName = $value")
                 } else {
                     val stringValue = stringRepresentation(value)
                     if (stringValue != null) {
