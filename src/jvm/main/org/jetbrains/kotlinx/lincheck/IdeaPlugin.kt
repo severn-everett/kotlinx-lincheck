@@ -36,7 +36,12 @@ fun replay(): Boolean {
 }
 
 fun beforeEvent(eventId: Int, type: String) {
+    runCatching {
+        visualizeInstance(testObjectPlantUMLVisualisation())
+    }
     println("$eventId $type: ${Exception().stackTrace[1]}")
 }
+
+fun visualizeInstance(s: String) {}
 
 fun onThreadChange() {}
