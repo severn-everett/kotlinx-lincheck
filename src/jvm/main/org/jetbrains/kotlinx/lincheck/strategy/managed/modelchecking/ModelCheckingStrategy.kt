@@ -79,7 +79,7 @@ internal class ModelCheckingStrategy(
     private class EventCounterProvider {
         var lastId = 0
             private set
-        fun nextId() = ++lastId
+        fun nextId() = lastId++
     }
 
     internal fun nextEventId() =
