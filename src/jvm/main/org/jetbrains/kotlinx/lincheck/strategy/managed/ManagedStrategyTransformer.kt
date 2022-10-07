@@ -429,7 +429,8 @@ internal class ManagedStrategyTransformer(
         private val isSuspendStateMachine by lazy { isSuspendStateMachine(className) }
 
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
-            if (isSuspendStateMachine || isStrategyMethod(owner) || isInternalCoroutineCall(owner, name) || name == "<init>") {
+            if (isSuspendStateMachine || isStrategyMethod(owner) || isInternalCoroutineCall(owner, name) || name == "<init>"
+                || owner == "java/lang/Integer" || owner == "java/lang/String" || owner == "java/lang/Long") {
                 visitMethodInsn(opcode, owner, name, desc, itf)
                 return
             }
