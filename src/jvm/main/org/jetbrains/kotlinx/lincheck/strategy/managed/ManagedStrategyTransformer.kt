@@ -564,7 +564,7 @@ internal class ManagedStrategyTransformer(
                 MethodCallTracePoint(iThread, actorId, callStackTrace, methodName, ste)
             }
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_METHOD_CALL_METHOD)
-            invokeBeforeEvent("method call")
+            invokeBeforeEvent("method call $methodName")
         }
 
         private fun invokeAfterMethodCall(tracePointLocal: Int) {
