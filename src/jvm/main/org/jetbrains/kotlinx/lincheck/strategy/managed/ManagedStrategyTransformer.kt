@@ -403,15 +403,16 @@ internal class ManagedStrategyTransformer(
      */
     private inner class ClassInitializationTransformer(methodName: String, adapter: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, adapter)  {
         private val isClinit = methodName == "<clinit>"
+        private val isToString = methodName == "toString" // TODO proper fix
 
         override fun visitCode() {
-            if (isClinit)
+            if (isClinit || isToString)
                 invokeBeforeIgnoredSectionEntering()
             mv.visitCode()
         }
 
         override fun visitInsn(opcode: Int) {
-            if (isClinit) {
+            if (isClinit || isToString) {
                 when (opcode) {
                     ARETURN, DRETURN, FRETURN, IRETURN, LRETURN, RETURN -> invokeAfterIgnoredSectionLeaving()
                     else -> { }
