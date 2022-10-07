@@ -118,6 +118,9 @@ internal class ModelCheckingStrategy(
 //                        }
 //                        check(strings.contentEquals(stringsReplayed))
 //                    }
+
+                    // TODO uncomment me for debug info
+                    // TODO start
 //                    println()
 //                    println()
 //                    println()
@@ -125,10 +128,11 @@ internal class ModelCheckingStrategy(
 //                    println()
 //                    println(strings.size)
 //                    println(strings.joinToString(separator = "\n"))
-                    doReplay()
-                    while (replay()) {
-                        doReplay()
-                    }
+//                    doReplay()
+//                    while (replay()) {
+//                        doReplay()
+//                    }
+                    // TODO end
                 }
                 return failure
             }

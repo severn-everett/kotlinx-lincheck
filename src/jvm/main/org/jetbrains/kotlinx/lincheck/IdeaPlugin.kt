@@ -20,6 +20,9 @@
 
 package org.jetbrains.kotlinx.lincheck
 
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyStateHolder
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
+
 // This is org.jetbrains.kotlinx.lincheck.IdeaPluginKt class
 
 // Invoked by Lincheck after the minimization is applied. DO NOT FORGET TO TURN OFF THE RUNNER TIMEOUTS.
@@ -31,11 +34,14 @@ fun replay(): Boolean {
     return false // should be replaced with `true` to replay the failure
 }
 
-fun beforeEvent(eventId: Int) {
+fun beforeEvent(eventId: Int, type: String) {
+    val strategy = (ManagedStrategyStateHolder.strategy!! as ModelCheckingStrategy)
+    strategy.enterIgnoredSection(strategy.currentThreadNumber())
     runCatching {
         visualizeInstance(testObjectPlantUMLVisualisation())
     }
-//    println(eventId)
+    strategy.leaveIgnoredSection(strategy.currentThreadNumber())
+//    println("$eventId $type ${Exception().stackTrace[1]}")
 }
 
 fun visualizeInstance(s: String) {}
