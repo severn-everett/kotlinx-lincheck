@@ -62,7 +62,7 @@ fun visualize(obj: Any): String {
 }
 
 private fun name(obj: Any): String =
-    obj.javaClass.canonicalName.replace("[]", "_ARRAY_") + "___________________" + getObjectNumber(obj.javaClass, obj)
+    obj.javaClass.canonicalName.replace("[]", "_ARRAY_").replace("tran\$f*rmed", "______transformed_____") + "___________________" + getObjectNumber(obj.javaClass, obj)
 
 private fun title(obj: Any): String =
     obj.javaClass.simpleName + "#" + getObjectNumber(obj.javaClass, obj)
