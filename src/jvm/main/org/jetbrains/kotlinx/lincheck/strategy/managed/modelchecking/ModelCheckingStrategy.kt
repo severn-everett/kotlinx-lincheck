@@ -128,10 +128,10 @@ internal class ModelCheckingStrategy(
 //                    println()
 //                    println(strings.size)
 //                    println(strings.joinToString(separator = "\n"))
-//                    doReplay()
-//                    while (replay()) {
-//                        doReplay()
-//                    }
+                    doReplay()
+                    while (replay()) {
+                        doReplay()
+                    }
                     // TODO end
                 }
                 return failure
