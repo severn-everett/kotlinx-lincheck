@@ -1241,6 +1241,16 @@ internal class ManagedStrategyTransformer(
             loadStrategy()
             adapter.checkCast(MODEL_CHECKING_STRATEGY_TYPE)
             adapter.invokeVirtual(MODEL_CHECKING_STRATEGY_TYPE, GET_NEXT_EVENT_ID_METHOD)
+            val beforeEventId = adapter.newLocal(Type.INT_TYPE)
+            adapter.storeLocal(beforeEventId)
+
+            loadStrategy()
+            adapter.checkCast(MODEL_CHECKING_STRATEGY_TYPE)
+            adapter.loadLocal(beforeEventId)
+            adapter.invokeVirtual(MODEL_CHECKING_STRATEGY_TYPE, IS_GOOD_POINT_METHOD)
+            adapter.ifZCmp(GeneratorAdapter.EQ, inReplayEnd)
+
+            adapter.loadLocal(beforeEventId)
             adapter.push(type)
             adapter.invokeStatic(IDEA_PLUGIN_TYPE, BEFORE_EVENT_METHOD)
 
@@ -1396,6 +1406,7 @@ private val NEXT_INT_METHOD = Method("nextInt", Type.INT_TYPE, emptyArray<Type>(
 private val GET_REPLAY_PROPERTY = Method.getMethod(ModelCheckingStrategy::replay.javaGetter)
 private val GET_PARALLEL_STARTED_PROPERTY = Method.getMethod(ModelCheckingStrategy::shouldInvokeBeforeEvent.javaGetter)
 private val GET_NEXT_EVENT_ID_METHOD = Method.getMethod(ModelCheckingStrategy::nextEventId.javaMethod)
+private val IS_GOOD_POINT_METHOD = Method.getMethod(ModelCheckingStrategy::isGoodPoint.javaMethod)
 
 private val WRITE_KEYWORDS = listOf("set", "put", "swap", "exchange")
 

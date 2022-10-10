@@ -68,7 +68,7 @@ internal class ModelCheckingStrategy(
     // This random is used for choosing the next unexplored interleaving node in the tree.
     private val generationRandom = Random(0)
     // The interleaving that will be studied on the next invocation.
-    private lateinit var currentInterleaving: Interleaving
+    internal lateinit var currentInterleaving: Interleaving
 
     private var eventIdProvider = EventCounterProvider()
 
@@ -84,6 +84,12 @@ internal class ModelCheckingStrategy(
 
     internal fun nextEventId() =
         eventIdProvider.nextId()
+
+    internal fun readNextEventId() =
+        eventIdProvider.lastId
+
+    private var goodPoints: MutableSet<Int>? = null
+    internal fun isGoodPoint(beforeEventId: Int) = goodPoints.let { it == null || it.contains(beforeEventId) }
 
     override fun runImpl(): LincheckFailure? {
         while (usedInvocations < maxInvocations) {
@@ -107,6 +113,11 @@ internal class ModelCheckingStrategy(
                     }.toTypedArray()
 //                    strings.forEach { println(it) }
                     testFailed(strings)
+                    goodPoints = HashSet()
+                    failure.trace.trace.forEach {
+                        goodPoints!!.add(it.beforeEventId)
+                        it.callStackTrace.forEach { goodPoints!!.add(it.call.beforeEventId) }
+                    }
 //                    val replayedInvocationResult = doReplay()
 //                    if (failure is IncorrectResultsFailure) {
 //                        check(failure.results == (replayedInvocationResult as CompletedInvocationResult).results)
@@ -121,13 +132,14 @@ internal class ModelCheckingStrategy(
 
                     // TODO uncomment me for debug info
                     // TODO start
-//                    println()
-//                    println()
-//                    println()
-//                    println()
-//                    println()
-//                    println(strings.size)
-//                    println(strings.joinToString(separator = "\n"))
+                    println()
+                    println()
+                    println()
+                    println()
+                    println()
+                    println(goodPoints!!.size)
+                    println(strings.size)
+                    println(strings.joinToString(separator = "\n"))
                     doReplay()
                     while (replay()) {
                         doReplay()
@@ -141,7 +153,7 @@ internal class ModelCheckingStrategy(
     }
 
     private fun doReplay(): InvocationResult {
-//        currentInterleaving = currentInterleaving.copy()
+        currentInterleaving = currentInterleaving.copy()
         replay = true
         eventIdProvider = EventCounterProvider()
         return runInvocation()
@@ -167,6 +179,7 @@ internal class ModelCheckingStrategy(
     }
 
     override fun initializeInvocation() {
+        eventIdProvider = EventCounterProvider()
         currentInterleaving.initialize()
         super.initializeInvocation()
     }
@@ -176,7 +189,7 @@ internal class ModelCheckingStrategy(
     /**
      * An abstract node with an execution choice in the interleaving tree.
      */
-    private abstract inner class InterleavingTreeNode {
+    internal abstract inner class InterleavingTreeNode {
         private var fractionUnexplored = 1.0
         lateinit var choices: List<Choice>
         var isFullyExplored: Boolean = false
@@ -264,7 +277,7 @@ internal class ModelCheckingStrategy(
     /**
      * Represents a choice of a position of a thread context switch.
      */
-    private inner class SwitchChoosingNode : InterleavingTreeNode() {
+    internal inner class SwitchChoosingNode : InterleavingTreeNode() {
         override fun nextInterleaving(interleavingBuilder: InterleavingBuilder): Interleaving {
             val isLeaf = maxNumberOfSwitches == interleavingBuilder.numberOfSwitches
             if (isLeaf) {
@@ -281,12 +294,12 @@ internal class ModelCheckingStrategy(
         }
     }
 
-    private inner class Choice(val node: InterleavingTreeNode, val value: Int)
+    internal inner class Choice(val node: InterleavingTreeNode, val value: Int)
 
     /**
      * This class specifies an interleaving that is re-producible.
      */
-    private inner class Interleaving(
+    internal inner class Interleaving(
         private val switchPositions: List<Int>,
         private val threadSwitchChoices: List<Int>,
         private var lastNotInitializedNode: SwitchChoosingNode?
@@ -344,7 +357,7 @@ internal class ModelCheckingStrategy(
         }
     }
 
-    private inner class InterleavingBuilder {
+    internal inner class InterleavingBuilder {
         private val switchPositions = mutableListOf<Int>()
         private val threadSwitchChoices = mutableListOf<Int>()
         private var lastNoninitializedNode: SwitchChoosingNode? = null

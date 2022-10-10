@@ -59,6 +59,7 @@ class LockFreeSetTest {
     }
 }
 
+//@Ignore
 class LockFreeSetTest2 {
     private val set = LockFreeSet2()
     @Operation

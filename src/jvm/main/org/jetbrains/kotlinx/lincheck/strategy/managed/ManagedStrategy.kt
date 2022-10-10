@@ -221,6 +221,7 @@ abstract class ManagedStrategy(
         runner = createRunner()
         initializeManagedState()
         runner.initialize()
+        (this as ModelCheckingStrategy).currentInterleaving = this.currentInterleaving.copy()
         val loggedResults = runInvocation()
         val sameResultTypes = loggedResults.javaClass == failingResult.javaClass
         val sameResults = loggedResults !is CompletedInvocationResult || failingResult !is CompletedInvocationResult || loggedResults.results == failingResult.results
@@ -443,7 +444,7 @@ abstract class ManagedStrategy(
     internal fun beforeAtomicMethodCall(iThread: Int, codeLocation: Int) {
         if (!isTestThread(iThread)) return
         // re-use last call trace point
-        newSwitchPoint(iThread, codeLocation, callStackTrace[iThread].lastOrNull()?.call)
+        newSwitchPoint(iThread, codeLocation, callStackTrace[iThread].lastOrNull()?.call?.let { AtomicCallTracePoint(it) })
     }
 
     /**

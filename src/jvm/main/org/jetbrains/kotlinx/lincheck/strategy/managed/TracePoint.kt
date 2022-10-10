@@ -40,7 +40,7 @@ data class Trace(val trace: List<TracePoint>, val verboseTrace: Boolean)
  * [callStackTrace] helps to understand whether two events
  * happened in the same, nested, or disjoint methods.
  */
-sealed class TracePoint(val iThread: Int, val actorId: Int, internal val callStackTrace: CallStackTrace) {
+sealed class TracePoint(val iThread: Int, val actorId: Int, internal val callStackTrace: CallStackTrace, val beforeEventId: Int) {
     protected abstract fun toStringImpl(): String
     override fun toString(): String = toStringImpl()
 }
@@ -53,7 +53,7 @@ internal class SwitchEventTracePoint(
     iThread: Int, actorId: Int,
     val reason: SwitchReason,
     callStackTrace: CallStackTrace
-) : TracePoint(iThread, actorId, callStackTrace) {
+) : TracePoint(iThread, actorId, callStackTrace, -1) {
     override fun toStringImpl(): String {
         val reason = reason.toString()
         return "switch" + if (reason.isEmpty()) "" else " (reason: $reason)"
@@ -69,18 +69,18 @@ internal class SwitchEventTracePoint(
 internal abstract class CodeLocationTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
-    protected val stackTraceElement: StackTraceElement
-) : TracePoint(iThread, actorId, callStackTrace)
+    val stackTraceElement: StackTraceElement
+) : TracePoint(iThread, actorId, callStackTrace, (ManagedStrategyStateHolder.strategy as ModelCheckingStrategy).readNextEventId())
 
 internal class StateRepresentationTracePoint(
     iThread: Int, actorId: Int,
     val stateRepresentation: String,
     callStackTrace: CallStackTrace
-) : TracePoint(iThread, actorId, callStackTrace) {
+) : TracePoint(iThread, actorId, callStackTrace, -1) {
     override fun toStringImpl(): String = "STATE: $stateRepresentation"
 }
 
-internal class FinishThreadTracePoint(iThread: Int) : TracePoint(iThread, Int.MAX_VALUE, emptyList()) {
+internal class FinishThreadTracePoint(iThread: Int) : TracePoint(iThread, Int.MAX_VALUE, emptyList(), -1) {
     override fun toStringImpl(): String = "thread is finished"
 }
 
@@ -129,10 +129,10 @@ internal class WriteTracePoint(
     }
 }
 
-internal class MethodCallTracePoint(
+internal open class MethodCallTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
-    private val methodName: String,
+    val methodName: String,
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
     private var returnedValue: Any? = NO_VALUE
@@ -248,8 +248,8 @@ internal class UnparkTracePoint(
 
 internal class CoroutineCancellationTracePoint(
     iThread: Int, actorId: Int,
-    callStackTrace: CallStackTrace,
-) : TracePoint(iThread, actorId, callStackTrace) {
+    callStackTrace: CallStackTrace
+) : TracePoint(iThread, actorId, callStackTrace, -1) {
     private lateinit var cancellationResult: CancellationResult
     private var exception: Throwable? = null
 
@@ -318,6 +318,10 @@ internal enum class SwitchReason(private val reason: String) {
  * Suspended method calls have the same [identifier] before and after suspension, but different [call] points.
  */
 internal class CallStackTraceElement(val call: MethodCallTracePoint, val identifier: Int)
+
+internal class AtomicCallTracePoint(
+    call: MethodCallTracePoint
+) : MethodCallTracePoint(call.iThread, call.actorId, call.callStackTrace, call.methodName, call.stackTraceElement)
 
 @Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
 private val Class<out Any>?.isImmutableWithNiceToString get() = this?.canonicalName in
