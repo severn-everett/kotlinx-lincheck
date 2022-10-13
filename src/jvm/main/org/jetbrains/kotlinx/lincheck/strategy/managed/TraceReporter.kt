@@ -117,17 +117,17 @@ private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionR
                 for (call in event.callStackTrace) {
                     val callId = call.identifier
                     // Switch events that happen as a first event of the method are lifted out of the method in the trace
-                    if (!callNodes.containsKey(callId) && event is SwitchEventTracePoint) break
-                    val callNode = callNodes.computeIfAbsent(callId) {
-                        // create a new call node if needed
-                        val result = traceGraphNodes.createAndAppend { lastNode ->
-                            CallNode(iThread, lastNode, trace.verboseTrace, innerNode.callDepth + 1, call.call)
-                        }
-                        // make it a child of the previous node
-                        innerNode.addInternalEvent(result)
-                        result
-                    }
-                    innerNode = callNode
+//                    if (!callNodes.containsKey(callId) && event is SwitchEventTracePoint) break
+//                    val callNode = callNodes.computeIfAbsent(callId) {
+//                        // create a new call node if needed
+//                        val result = traceGraphNodes.createAndAppend { lastNode ->
+//                            CallNode(iThread, lastNode, trace.verboseTrace, innerNode.callDepth + 1, call.call)
+//                        }
+//                        // make it a child of the previous node
+//                        innerNode.addInternalEvent(result)
+//                        result
+//                    }
+//                    innerNode = callNode
                 }
                 val isLastExecutedEvent = eventId == lastExecutedEvents[iThread]
                 val node = traceGraphNodes.createAndAppend { lastNode ->
