@@ -83,13 +83,18 @@ internal class ModelCheckingStrategy(
     }
 
     internal fun nextEventId() =
-        eventIdProvider.nextId()
+        transformBeforeEventId(eventIdProvider.nextId())
 
     internal fun readNextEventId() =
         eventIdProvider.lastId
 
     private var goodPoints: MutableSet<Int>? = null
     internal fun isGoodPoint(beforeEventId: Int) = goodPoints.let { it == null || it.contains(beforeEventId) }
+
+    private var beforeIdMap: Map<Int, Int>? = null
+
+    private fun transformBeforeEventId(beforeEventId: Int): Int =
+        if (beforeIdMap == null) beforeEventId else beforeIdMap!![beforeEventId]!!
 
     override fun runImpl(): LincheckFailure? {
         while (usedInvocations < maxInvocations) {
@@ -120,6 +125,12 @@ internal class ModelCheckingStrategy(
                             goodPoints!!.add(it.beforeEventId)
                             it.callStackTrace.forEach { goodPoints!!.add(it.call.beforeEventId) }
                         }
+
+                    val map = HashMap<Int, Int>()
+                    goodPoints!!.sorted().forEachIndexed { index, id ->
+                        map.put(id, index)
+                    }
+                    beforeIdMap = map
 //                    val replayedInvocationResult = doReplay()
 //                    if (failure is IncorrectResultsFailure) {
 //                        check(failure.results == (replayedInvocationResult as CompletedInvocationResult).results)
