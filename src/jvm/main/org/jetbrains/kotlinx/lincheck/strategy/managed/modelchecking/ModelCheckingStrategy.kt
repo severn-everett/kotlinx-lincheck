@@ -111,13 +111,15 @@ internal class ModelCheckingStrategy(
                             !it.contains(Regex("\\|( )+result:"))
                         }
                     }.toTypedArray()
-//                    strings.forEach { println(it) }
                     testFailed(strings)
                     goodPoints = HashSet()
-                    failure.trace.trace.forEach {
-                        goodPoints!!.add(it.beforeEventId)
-                        it.callStackTrace.forEach { goodPoints!!.add(it.call.beforeEventId) }
-                    }
+                    failure.trace.trace
+                        .filter {
+                            it !is SwitchEventTracePoint && it !is FinishThreadTracePoint
+                        }.forEach {
+                            goodPoints!!.add(it.beforeEventId)
+                            it.callStackTrace.forEach { goodPoints!!.add(it.call.beforeEventId) }
+                        }
 //                    val replayedInvocationResult = doReplay()
 //                    if (failure is IncorrectResultsFailure) {
 //                        check(failure.results == (replayedInvocationResult as CompletedInvocationResult).results)
@@ -132,14 +134,15 @@ internal class ModelCheckingStrategy(
 
                     // TODO uncomment me for debug info
                     // TODO start
-                    println()
-                    println()
-                    println()
-                    println()
-                    println()
-                    println(goodPoints!!.size)
-                    println(strings.size)
-                    println(strings.joinToString(separator = "\n"))
+//                    println()
+//                    println()
+//                    println()
+//                    println()
+//                    println()
+//                    println("GOOD POINTS: " + goodPoints!!.size)
+//                    println(goodPoints)
+//                    println("TRACE SIZE: " + strings.size)
+//                    println(strings.joinToString(separator = "\n"))
                     doReplay()
                     while (replay()) {
                         doReplay()

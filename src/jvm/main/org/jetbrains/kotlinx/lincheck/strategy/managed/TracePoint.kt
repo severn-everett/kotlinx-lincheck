@@ -69,8 +69,10 @@ internal class SwitchEventTracePoint(
 internal abstract class CodeLocationTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
-    val stackTraceElement: StackTraceElement
-) : TracePoint(iThread, actorId, callStackTrace, (ManagedStrategyStateHolder.strategy as ModelCheckingStrategy).readNextEventId())
+    val stackTraceElement: StackTraceElement,
+    beforeEventId: Int = -1
+) : TracePoint(iThread, actorId, callStackTrace,
+    if (beforeEventId == -1) (ManagedStrategyStateHolder.strategy as ModelCheckingStrategy).readNextEventId() else beforeEventId)
 
 internal class StateRepresentationTracePoint(
     iThread: Int, actorId: Int,
@@ -133,8 +135,9 @@ internal open class MethodCallTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
     val methodName: String,
-    stackTraceElement: StackTraceElement
-) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
+    stackTraceElement: StackTraceElement,
+    beforeEventId: Int = -1
+) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement, beforeEventId) {
     private var returnedValue: Any? = NO_VALUE
     private var thrownException: Throwable? = null
     private var parameters: Array<Any?>? = null
@@ -321,7 +324,7 @@ internal class CallStackTraceElement(val call: MethodCallTracePoint, val identif
 
 internal class AtomicCallTracePoint(
     call: MethodCallTracePoint
-) : MethodCallTracePoint(call.iThread, call.actorId, call.callStackTrace, call.methodName, call.stackTraceElement)
+) : MethodCallTracePoint(call.iThread, call.actorId, call.callStackTrace, call.methodName, call.stackTraceElement, call.beforeEventId)
 
 @Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
 private val Class<out Any>?.isImmutableWithNiceToString get() = this?.canonicalName in

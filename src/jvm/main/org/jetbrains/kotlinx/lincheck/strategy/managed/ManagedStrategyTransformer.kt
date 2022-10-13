@@ -391,8 +391,6 @@ internal class ManagedStrategyTransformer(
             loadCurrentThreadNumber()
             adapter.push(codeLocationIdProvider.lastId) // re-use previous code location
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_ATOMIC_METHOD_CALL_METHOD)
-            // todo invoke from lincheck
-            invokeBeforeEvent("atomic")
         }
     }
 
@@ -429,8 +427,7 @@ internal class ManagedStrategyTransformer(
         private val isSuspendStateMachine by lazy { isSuspendStateMachine(className) }
 
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
-            if (isSuspendStateMachine || isStrategyMethod(owner) || isInternalCoroutineCall(owner, name) || name == "<init>"
-                || owner == "java/lang/Integer" || owner == "java/lang/String" || owner == "java/lang/Long") {
+            if (isSuspendStateMachine || isStrategyMethod(owner) || isInternalCoroutineCall(owner, name)) {
                 visitMethodInsn(opcode, owner, name, desc, itf)
                 return
             }
