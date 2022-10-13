@@ -83,17 +83,17 @@ internal class ModelCheckingStrategy(
     }
 
     internal fun nextEventId() =
-        transformBeforeEventId(eventIdProvider.nextId())
+        eventIdProvider.nextId()
 
     internal fun readNextEventId() =
         eventIdProvider.lastId
 
-    private var goodPoints: MutableSet<Int>? = null
+    var goodPoints: MutableSet<Int>? = null
     internal fun isGoodPoint(beforeEventId: Int) = goodPoints.let { it == null || it.contains(beforeEventId) }
 
     private var beforeIdMap: Map<Int, Int>? = null
 
-    private fun transformBeforeEventId(beforeEventId: Int): Int =
+    internal fun transformBeforeEventId(beforeEventId: Int): Int =
         if (beforeIdMap == null) beforeEventId else beforeIdMap!![beforeEventId]!!
 
     override fun runImpl(): LincheckFailure? {

@@ -41,7 +41,8 @@ fun beforeEvent(eventId: Int, type: String) {
         visualizeInstance(testObjectPlantUMLVisualisation())
     }
     strategy.leaveIgnoredSection(strategy.currentThreadNumber())
-//    println("$eventId $type ${Exception().stackTrace[1]}")
+//    if (strategy.goodPoints != null)
+//        println("$eventId $type ${Exception().stackTrace[1]}")
 }
 
 fun visualizeInstance(s: String) {}
