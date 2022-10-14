@@ -167,6 +167,7 @@ internal class ModelCheckingStrategy(
     }
 
     private fun doReplay(): InvocationResult {
+        cleanObjectNumeration()
         currentInterleaving = currentInterleaving.copy()
         replay = true
         eventIdProvider = EventCounterProvider()

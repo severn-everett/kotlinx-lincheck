@@ -288,4 +288,8 @@ internal fun getObjectNumber(clazz: Class<Any>, obj: Any): Int = objectNumeratio
     .computeIfAbsent(clazz) { IdentityHashMap() }
     .computeIfAbsent(obj) { 1 + objectNumeration[clazz]!!.size }
 
+internal fun cleanObjectNumeration() {
+    objectNumeration.clear()
+}
+
 private val objectNumeration = WeakHashMap<Class<Any>, MutableMap<Any, Int>>()
