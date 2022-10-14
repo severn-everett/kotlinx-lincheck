@@ -37,14 +37,17 @@ fun replay(): Boolean {
 fun beforeEvent(eventId: Int, type: String) {
     val strategy = (ManagedStrategyStateHolder.strategy!! as ModelCheckingStrategy)
     strategy.enterIgnoredSection(strategy.currentThreadNumber())
-    runCatching {
-        visualizeInstance(testObjectPlantUMLVisualisation())
+    if (needVisualization()) {
+        runCatching {
+            visualizeInstance(testObjectPlantUMLVisualisation())
+        }
     }
     strategy.leaveIgnoredSection(strategy.currentThreadNumber())
-//    if (strategy.goodPoints != null)
-//        println("$eventId $type ${Exception().stackTrace[1]}")
+    if (strategy.goodPoints != null)
+        println("$eventId $type ${Exception().stackTrace[1]}")
 }
 
 fun visualizeInstance(s: String) {}
+fun needVisualization(): Boolean = false // may be replaced with 'true' in plugin
 
 fun onThreadChange() {}
