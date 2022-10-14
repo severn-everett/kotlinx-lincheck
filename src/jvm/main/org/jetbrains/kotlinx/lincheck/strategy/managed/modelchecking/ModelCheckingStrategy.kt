@@ -151,7 +151,7 @@ internal class ModelCheckingStrategy(
 //                    println()
 //                    println()
 //                    println("GOOD POINTS: " + goodPoints!!.size)
-//                    println(goodPoints)
+//                    println(goodPoints!!.sorted())
 //                    println("TRACE SIZE: " + strings.size)
 //                    println(strings.joinToString(separator = "\n"))
                     doReplay()

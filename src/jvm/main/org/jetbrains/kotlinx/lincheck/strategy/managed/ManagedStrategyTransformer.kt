@@ -387,10 +387,12 @@ internal class ManagedStrategyTransformer(
         }
 
         private fun invokeBeforeAtomicMethodCall() {
+//            val beforeEventId = getNewBeforeEventId()
             loadStrategy()
             loadCurrentThreadNumber()
             adapter.push(codeLocationIdProvider.lastId) // re-use previous code location
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_ATOMIC_METHOD_CALL_METHOD)
+            invokeBeforeEvent("atomic")
         }
     }
 
@@ -1241,6 +1243,68 @@ internal class ManagedStrategyTransformer(
             val beforeEventId = adapter.newLocal(Type.INT_TYPE)
             adapter.storeLocal(beforeEventId)
 
+            loadStrategy()
+            adapter.checkCast(MODEL_CHECKING_STRATEGY_TYPE)
+            adapter.loadLocal(beforeEventId)
+            adapter.invokeVirtual(MODEL_CHECKING_STRATEGY_TYPE, IS_GOOD_POINT_METHOD)
+            adapter.ifZCmp(GeneratorAdapter.EQ, inReplayEnd)
+
+            loadStrategy()
+            adapter.checkCast(MODEL_CHECKING_STRATEGY_TYPE)
+            adapter.loadLocal(beforeEventId)
+            adapter.invokeVirtual(MODEL_CHECKING_STRATEGY_TYPE, TRANSFORM_EVENT_ID_METHOD)
+            adapter.push(type)
+            adapter.invokeStatic(IDEA_PLUGIN_TYPE, BEFORE_EVENT_METHOD)
+
+            adapter.visitLabel(inReplayEnd)
+        }
+
+        protected fun getNewBeforeEventId(): Int {
+            // if ((strategy as ModelCheckingStrategy).replay) {
+            //    val eventId = countEventId(threadId + strategy.eventIdProvider.nextId())
+            //    beforeEvent(eventId)
+            // }
+            val beforeEventId = adapter.newLocal(Type.INT_TYPE)
+            adapter.push(-1)
+            adapter.storeLocal(beforeEventId)
+
+            val inReplayEnd: Label = adapter.newLabel()
+            loadStrategy()
+            adapter.checkCast(MODEL_CHECKING_STRATEGY_TYPE)
+            adapter.invokeVirtual(MODEL_CHECKING_STRATEGY_TYPE, GET_REPLAY_PROPERTY)
+            adapter.ifZCmp(GeneratorAdapter.EQ, inReplayEnd)
+
+            loadStrategy()
+            adapter.checkCast(MODEL_CHECKING_STRATEGY_TYPE)
+            adapter.invokeVirtual(MODEL_CHECKING_STRATEGY_TYPE, GET_PARALLEL_STARTED_PROPERTY)
+            adapter.ifZCmp(GeneratorAdapter.EQ, inReplayEnd)
+
+            loadStrategy()
+            adapter.checkCast(MODEL_CHECKING_STRATEGY_TYPE)
+            adapter.invokeVirtual(MODEL_CHECKING_STRATEGY_TYPE, GET_NEXT_EVENT_ID_METHOD)
+            adapter.storeLocal(beforeEventId)
+
+            adapter.visitLabel(inReplayEnd)
+
+            return beforeEventId
+        }
+
+        protected fun invokeBeforeEvent(type: String, beforeEventId: Int) {
+            // if ((strategy as ModelCheckingStrategy).replay) {
+            //    val eventId = countEventId(threadId + strategy.eventIdProvider.nextId())
+            //    beforeEvent(eventId)
+            // }
+            val inReplayEnd: Label = adapter.newLabel()
+            loadStrategy()
+            adapter.checkCast(MODEL_CHECKING_STRATEGY_TYPE)
+            adapter.invokeVirtual(MODEL_CHECKING_STRATEGY_TYPE, GET_REPLAY_PROPERTY)
+            adapter.ifZCmp(GeneratorAdapter.EQ, inReplayEnd)
+
+            loadStrategy()
+            adapter.checkCast(MODEL_CHECKING_STRATEGY_TYPE)
+            adapter.invokeVirtual(MODEL_CHECKING_STRATEGY_TYPE, GET_PARALLEL_STARTED_PROPERTY)
+            adapter.ifZCmp(GeneratorAdapter.EQ, inReplayEnd)
+//
             loadStrategy()
             adapter.checkCast(MODEL_CHECKING_STRATEGY_TYPE)
             adapter.loadLocal(beforeEventId)

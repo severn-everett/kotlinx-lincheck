@@ -43,8 +43,8 @@ fun beforeEvent(eventId: Int, type: String) {
         }
     }
     strategy.leaveIgnoredSection(strategy.currentThreadNumber())
-    if (strategy.goodPoints != null)
-        println("$eventId $type ${Exception().stackTrace[1]}")
+//    if (strategy.goodPoints != null)
+//        println("$eventId $type ${Exception().stackTrace[1]}")
 }
 
 fun visualizeInstance(s: String) {}

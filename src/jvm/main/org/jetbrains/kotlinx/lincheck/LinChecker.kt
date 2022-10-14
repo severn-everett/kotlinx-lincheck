@@ -197,7 +197,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
                     val errorMessage = StringBuilder().appendStateEquivalenceViolationMessage(sequentialSpecification).toString()
                     error(errorMessage)
                 } else {
-                    reporter.logStateEquivalenceViolation(sequentialSpecification)
+//                    reporter.logStateEquivalenceViolation(sequentialSpecification)
                 }
             }
         }

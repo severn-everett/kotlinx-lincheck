@@ -324,7 +324,7 @@ internal class CallStackTraceElement(val call: MethodCallTracePoint, val identif
 
 internal class AtomicCallTracePoint(
     call: MethodCallTracePoint
-) : MethodCallTracePoint(call.iThread, call.actorId, call.callStackTrace, call.methodName, call.stackTraceElement, call.beforeEventId)
+) : MethodCallTracePoint(call.iThread, call.actorId, call.callStackTrace, call.methodName, call.stackTraceElement)
 
 @Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
 private val Class<out Any>?.isImmutableWithNiceToString get() = this?.canonicalName in

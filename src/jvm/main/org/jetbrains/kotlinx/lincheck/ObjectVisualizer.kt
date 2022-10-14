@@ -20,6 +20,7 @@
 
 package org.jetbrains.kotlinx.lincheck
 
+import org.jetbrains.kotlinx.lincheck.TransformationClassLoader.REMAPPED_PACKAGE_CANONICAL_NAME
 import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyStateHolder
 import org.jetbrains.kotlinx.lincheck.strategy.managed.getObjectNumber
@@ -134,10 +135,16 @@ private fun visualize(obj: Any, sb: StringBuilder, visualized: MutableSet<Any>) 
                 val fieldName = f.name
                 var value: Any? = f.get(obj)
 
-                if (value is AtomicInteger) value = value.get()
-                if (value is AtomicLong) value = value.get()
-                if (value is AtomicReference<*>) value = value.get()
-                if (value is AtomicBoolean) value = value.get()
+                val atomic = value?.javaClass?.canonicalName?.let {
+                    it == REMAPPED_PACKAGE_CANONICAL_NAME + "java.util.concurrent.atomic.AtomicInteger" ||
+                    it == REMAPPED_PACKAGE_CANONICAL_NAME + "java.util.concurrent.atomic.AtomicLong" ||
+                    it == REMAPPED_PACKAGE_CANONICAL_NAME + "java.util.concurrent.atomic.AtomicReference" ||
+                    it == REMAPPED_PACKAGE_CANONICAL_NAME + "java.util.concurrent.atomic.AtomicBoolean"
+                } ?: false
+                if (atomic) {
+                    value = value!!.javaClass.getDeclaredMethod("get").invoke(value)
+                }
+
                 if (value?.javaClass?.canonicalName == "kotlinx.atomicfu.AtomicRef") value = value.javaClass.getDeclaredField("value").apply { isAccessible = true }.get(value)
                 if (value?.javaClass?.canonicalName == "kotlinx.atomicfu.AtomicInt") value = value.javaClass.getDeclaredField("value").apply { isAccessible = true }.get(value)
                 if (value?.javaClass?.canonicalName == "kotlinx.atomicfu.AtomicLong") value = value.javaClass.getDeclaredField("value").apply { isAccessible = true }.get(value)
