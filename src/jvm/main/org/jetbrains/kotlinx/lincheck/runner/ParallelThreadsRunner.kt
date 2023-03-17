@@ -287,14 +287,12 @@ internal open class ParallelThreadsRunner(
             return DeadlockInvocationResult(threadDump)
         } catch (e: ExecutionException) {
             return UnexpectedExceptionInvocationResult(e.cause!!)
-        } finally {
-            reset()
         }
     }
 
     private fun createInitialPartExecution() = object : TestThreadExecution() {
         init {
-            iThread = scenario.threads
+            iThread = initThreadId
         }
 
         override fun run() {
@@ -318,7 +316,7 @@ internal open class ParallelThreadsRunner(
 
     private fun createPostPartExecution() = object : TestThreadExecution() {
         init {
-            iThread = scenario.threads + 1
+            iThread = postThreadId
         }
 
         override fun run() {
@@ -363,7 +361,7 @@ internal open class ParallelThreadsRunner(
     private fun createAfterParallelPartExecution() = object : TestThreadExecution() {
         init {
             // execute after parallel part routines in the post thread
-            iThread = scenario.threads + 1
+            iThread = postThreadId
         }
 
         override fun run() {
