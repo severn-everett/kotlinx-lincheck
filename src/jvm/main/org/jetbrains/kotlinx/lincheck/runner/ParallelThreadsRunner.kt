@@ -78,6 +78,28 @@ internal open class ParallelThreadsRunner(
     private var spinningTimeBeforeYield = 1000 // # of loop cycles
     private var yieldInvokedInOnStart = false
 
+    private val initThreadId = scenario.threads
+    private val postThreadId = scenario.threads + 1
+
+    private fun isInitThreadId(iThread: Int) = iThread == initThreadId
+    private fun isPostThreadId(iThread: Int) = iThread == postThreadId
+    private fun isParallelThreadId(iThread: Int) = iThread in (0 until scenario.threads)
+
+    private lateinit var initialPartExecution: TestThreadExecution
+    private lateinit var parallelPartExecutions: Array<TestThreadExecution>
+    private lateinit var afterParallelPartExecution: TestThreadExecution
+    private lateinit var postPartExecution: TestThreadExecution
+
+    override fun initialize() {
+        super.initialize()
+        testInstance = testClass.newInstance()
+        initialPartExecution = createInitialPartExecution()
+        parallelPartExecutions = createParallelPartExecutions()
+        afterParallelPartExecution = createAfterParallelPartExecution()
+        postPartExecution = createPostPartExecution()
+        reset()
+    }
+
     /**
      * Passed as continuation to invoke the suspendable actor from [iThread].
      *
@@ -151,6 +173,11 @@ internal open class ParallelThreadsRunner(
         }
         // reset stored continuations
         executor.threads.forEach { it.cont = null }
+        // reset thread executions
+        initialPartExecution.reset()
+        parallelPartExecutions.forEach { it.reset() }
+        afterParallelPartExecution.reset()
+        postPartExecution.reset()
     }
 
     /**
@@ -229,53 +256,42 @@ internal open class ParallelThreadsRunner(
         suspensionPointResults[iThread][actorId] != NoResult || completions[iThread][actorId].resWithCont.get() != null
 
     override fun run(): InvocationResult {
-        reset()
         try {
             // execute initial part
-            val initialPartInfo = ExecutionPartInfo()
-            val initialExecution = createInitialPartExecution(initialPartInfo)
-            executor.submitAndAwait(arrayOf(initialExecution), timeoutMs)
-            initialPartInfo.validationFailure?.let { return it }
+            executor.submitAndAwait(arrayOf(initialPartExecution), timeoutMs)
+            initialPartExecution.validationFailure?.let { return it }
             // execute parallel part
-            val parallelExecutions = createParallelPartExecutions()
-            executor.submitAndAwait(parallelExecutions, timeoutMs)
+            executor.submitAndAwait(parallelPartExecutions, timeoutMs)
             // execute after parallel part routines
-            val afterParallelPartInfo = ExecutionPartInfo()
-            val afterParallelExecution = createAfterParallelPartExecution(afterParallelPartInfo)
-            executor.submitAndAwait(arrayOf(afterParallelExecution), timeoutMs)
-            afterParallelPartInfo.validationFailure?.let { return it }
+            executor.submitAndAwait(arrayOf(afterParallelPartExecution), timeoutMs)
+            afterParallelPartExecution.validationFailure?.let { return it }
             // execute post part
-            val postPartInfo = ExecutionPartInfo()
-            val postExecution = createPostPartExecution(postPartInfo)
-            executor.submitAndAwait(arrayOf(postExecution), timeoutMs)
-            postPartInfo.validationFailure?.let { return it }
+            executor.submitAndAwait(arrayOf(postPartExecution), timeoutMs)
+            postPartExecution.validationFailure?.let { return it }
             // get the result
             return CompletedInvocationResult(ExecutionResult(
-                initResults = initialExecution.results.asList(),
-                afterInitStateRepresentation = initialPartInfo.stateRepresentation,
-                parallelResultsWithClock = parallelExecutions.map { execution ->
+                initResults = initialPartExecution.results.asList(),
+                afterInitStateRepresentation = initialPartExecution.stateRepresentation,
+                parallelResultsWithClock = parallelPartExecutions.map { execution ->
                     execution.results.zip(execution.clocks).map {
                         ResultWithClock(it.first, HBClock(it.second))
                     }
                 },
-                afterParallelStateRepresentation = afterParallelPartInfo.stateRepresentation,
-                postResults = postExecution.results.asList(),
-                afterPostStateRepresentation = postPartInfo.stateRepresentation
+                afterParallelStateRepresentation = afterParallelPartExecution.stateRepresentation,
+                postResults = postPartExecution.results.asList(),
+                afterPostStateRepresentation = postPartExecution.stateRepresentation
             ))
         } catch (e: TimeoutException) {
             val threadDump = collectThreadDump(this)
             return DeadlockInvocationResult(threadDump)
         } catch (e: ExecutionException) {
             return UnexpectedExceptionInvocationResult(e.cause!!)
+        } finally {
+            reset()
         }
     }
 
-    private class ExecutionPartInfo(
-        var validationFailure: ValidationFailureInvocationResult? = null,
-        var stateRepresentation: String? = null
-    )
-
-    private fun createInitialPartExecution(info: ExecutionPartInfo) = object : TestThreadExecution() {
+    private fun createInitialPartExecution() = object : TestThreadExecution() {
         init {
             iThread = scenario.threads
         }
@@ -284,7 +300,7 @@ internal open class ParallelThreadsRunner(
             scenario.initExecution.mapIndexed { i, actor ->
                 results[i] = executeActor(testInstance, actor)
                 executeValidationFunctions(testInstance, validationFunctions) { functionName, exception ->
-                    info.validationFailure = ValidationFailureInvocationResult(
+                    validationFailure = ValidationFailureInvocationResult(
                         ExecutionScenario(
                             scenario.initExecution.subList(0, i + 1),
                             emptyList(),
@@ -295,11 +311,11 @@ internal open class ParallelThreadsRunner(
                     )
                 }
             }
-            info.stateRepresentation = constructStateRepresentation()
+            stateRepresentation = constructStateRepresentation()
         }
-    }.apply { initialize(0, scenario.initExecution.size) }
+    }
 
-    private fun createPostPartExecution(info: ExecutionPartInfo) = object : TestThreadExecution() {
+    private fun createPostPartExecution() = object : TestThreadExecution() {
         init {
             iThread = scenario.threads + 1
         }
@@ -318,7 +334,7 @@ internal open class ParallelThreadsRunner(
                     }
                 }
                 executeValidationFunctions(testInstance, validationFunctions) { functionName, exception ->
-                    info.validationFailure = ValidationFailureInvocationResult(
+                    validationFailure = ValidationFailureInvocationResult(
                         ExecutionScenario(
                             scenario.initExecution,
                             scenario.parallelExecution,
@@ -329,9 +345,9 @@ internal open class ParallelThreadsRunner(
                     )
                 }
             }
-            info.stateRepresentation = constructStateRepresentation()
+            stateRepresentation = constructStateRepresentation()
         }
-    }.apply { initialize(0, scenario.postExecution.size) }
+    }
 
     private fun createParallelPartExecutions(): Array<TestThreadExecution> = Array(scenario.threads) { iThread ->
         TestThreadExecutionGenerator.create(this, iThread,
@@ -339,12 +355,11 @@ internal open class ParallelThreadsRunner(
             completions[iThread],
             scenario.hasSuspendableActors()
         )
-    }.apply { forEachIndexed { i, execution ->
-        execution.initialize(size, scenario.parallelExecution[i].size)
+    }.apply { forEach { execution ->
         execution.allThreadExecutions = this
     }}
 
-    private fun createAfterParallelPartExecution(info: ExecutionPartInfo) = object : TestThreadExecution() {
+    private fun createAfterParallelPartExecution() = object : TestThreadExecution() {
         init {
             // execute after parallel part routines in the post thread
             iThread = scenario.threads + 1
@@ -352,7 +367,7 @@ internal open class ParallelThreadsRunner(
 
         override fun run() {
             executeValidationFunctions(testInstance, validationFunctions) { functionName, exception ->
-                info.validationFailure = ValidationFailureInvocationResult(
+                validationFailure = ValidationFailureInvocationResult(
                     ExecutionScenario(
                         scenario.initExecution,
                         scenario.parallelExecution,
@@ -362,12 +377,22 @@ internal open class ParallelThreadsRunner(
                     exception
                 )
             }
-            info.stateRepresentation = constructStateRepresentation()
+            stateRepresentation = constructStateRepresentation()
         }
-    }.apply { initialize(0, 0) }
+    }
 
-    private fun TestThreadExecution.initialize(threadsCount: Int, actorsCount: Int) {
+    private fun TestThreadExecution.reset() {
         val runner = this@ParallelThreadsRunner
+        val threadsCount = when {
+            isParallelThreadId(iThread) -> scenario.threads
+            else -> 0
+        }
+        val actorsCount = when {
+            isInitThreadId(iThread) -> scenario.initExecution.size
+            isPostThreadId(iThread) -> scenario.postExecution.size
+            isParallelThreadId(iThread) -> scenario.parallelExecution[iThread].size
+            else -> 0
+        }
         testInstance = runner.testInstance
         results = arrayOfNulls(actorsCount)
         useClocks = if (runner.useClocks == ALWAYS) true else Random.nextBoolean()

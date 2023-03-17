@@ -35,7 +35,7 @@ class FixedActiveThreadsExecutorTest {
                     executed[it] = true
                 }
             }
-        }
+        }.apply { forEachIndexed { i, ex -> ex.iThread = i } }
         executor.submitAndAwait(tasks, Long.MAX_VALUE / 2)
         check(executed.all { it })
     }
@@ -49,7 +49,7 @@ class FixedActiveThreadsExecutorTest {
                     executed[it] = true
                 }
             }
-        }
+        }.apply { forEachIndexed { i, ex -> ex.iThread = i } }
         executor.submitAndAwait(tasks, Long.MAX_VALUE / 2)
         executed.fill(false)
         executor.submitAndAwait(tasks, Long.MAX_VALUE / 2)
@@ -65,7 +65,7 @@ class FixedActiveThreadsExecutorTest {
                         while (true);
                 }
             }
-        }
+        }.apply { forEachIndexed { i, ex -> ex.iThread = i } }
         try {
             executor.submitAndAwait(tasks, 200)
         } catch (e: TimeoutException) {

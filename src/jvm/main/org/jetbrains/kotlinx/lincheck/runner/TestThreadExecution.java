@@ -54,4 +54,8 @@ public abstract class TestThreadExecution implements Runnable {
     public void incClock() {
         curClock++;
     }
+
+    public String stateRepresentation;
+
+    public ValidationFailureInvocationResult validationFailure;
 }
