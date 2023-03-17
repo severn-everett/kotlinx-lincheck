@@ -25,7 +25,7 @@ import org.jetbrains.kotlinx.lincheck.Result;
 
 
 /**
- * Instance of this class represents the test execution for ONE thread. Several instances should be ran in parallel.
+ * Instance of this class represents the test execution for ONE thread. Several instances should be run in parallel.
  * All implementations of this class should be generated via {@link TestThreadExecutionGenerator}.
  * The results and clocks are in the `results`  and `clocks` fields correspondingly.
  *
@@ -39,6 +39,8 @@ public abstract class TestThreadExecution implements Runnable {
     public TestThreadExecution[] allThreadExecutions;
 
     public Result[] results; // for ExecutionResult
+
+    public int iThread; // thread ID of this execution
     public int[][] clocks; // for HBClock
     public volatile int curClock;
     public boolean useClocks;
