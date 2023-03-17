@@ -97,7 +97,6 @@ internal open class ParallelThreadsRunner(
         parallelPartExecutions = createParallelPartExecutions()
         afterParallelPartExecution = createAfterParallelPartExecution()
         postPartExecution = createPostPartExecution()
-        reset()
     }
 
     /**
@@ -257,6 +256,8 @@ internal open class ParallelThreadsRunner(
 
     override fun run(): InvocationResult {
         try {
+            // reset runner state
+            reset()
             // execute initial part
             executor.submitAndAwait(arrayOf(initialPartExecution), timeoutMs)
             initialPartExecution.validationFailure?.let { return it }
