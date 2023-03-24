@@ -51,7 +51,7 @@ class Reporter constructor(val logLevel: LoggingLevel) {
         appendStateEquivalenceViolationMessage(sequentialSpecification)
     }
 
-    private inline fun log(logLevel: LoggingLevel, crossinline msg: StringBuilder.() -> Unit): Unit = synchronized(this) {
+    internal inline fun log(logLevel: LoggingLevel, crossinline msg: StringBuilder.() -> Unit): Unit = synchronized(this) {
         if (this.logLevel > logLevel) return
         val sb = StringBuilder()
         msg(sb)
