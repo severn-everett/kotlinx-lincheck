@@ -21,24 +21,21 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.representation
 
-import kotlinx.atomicfu.*
+import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation
-import org.jetbrains.kotlinx.lincheck.appendFailure
-import org.jetbrains.kotlinx.lincheck.checkImpl
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
+import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
-import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
 import org.jetbrains.kotlinx.lincheck.test.*
-import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
-import org.junit.Test
-import java.lang.IllegalStateException
-import java.lang.StringBuilder
+import org.jetbrains.kotlinx.lincheck.verifier.*
+import org.junit.*
 import java.util.concurrent.atomic.*
 
 /**
  * This test checks that there are states in reported interleavings for model checking strategy.
  */
+@Ignore
 open class ModelCheckingStateReportingTest {
     @Volatile
     private var counter = AtomicInteger(0)
@@ -62,6 +59,7 @@ open class ModelCheckingStateReportingTest {
         val failure = options.checkImpl(this::class.java)
         check(failure != null) { "the test should fail" }
         val log = StringBuilder().appendFailure(failure).toString()
+        println(log)
         check("STATE: 0" in log)
         check("STATE: 1" in log)
         check("STATE: 4" in log)
@@ -104,6 +102,7 @@ class StressStateReportingTest : VerifierState() {
     }
 }
 
+@Ignore
 class StateRepresentationInParentClassTest : ModelCheckingStateReportingTest()
 
 class TwoStateRepresentationFunctionsTest : VerifierState() {

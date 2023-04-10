@@ -23,10 +23,10 @@ package org.jetbrains.kotlinx.lincheck.test.verifier.linearizability
 
 import kotlinx.coroutines.channels.Channel
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.test.verifier.*
-import org.jetbrains.kotlinx.lincheck.verifier.*
-import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*
-import org.junit.*
+import org.jetbrains.kotlinx.lincheck.test.verifier.verify
+import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
+import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier
+import org.junit.Test
 
 class RendezvousChannelCustomTest : VerifierState() {
     private val ch = Channel<Int>()
@@ -38,11 +38,11 @@ class RendezvousChannelCustomTest : VerifierState() {
         value + 2
     }
 
-    fun offer(value: Int) = ch.offer(value)
-    fun poll() = ch.poll()
+    fun offer(value: Int) = ch.trySend(value).isSuccess
+    fun poll() = ch.tryReceive().getOrNull()
 
     suspend fun receive(): Int = ch.receive() + 100
-    suspend fun receiveOrNull(): Int? = ch.receiveOrNull()?.plus(100)
+    suspend fun receiveOrNull(): Int? = ch.receiveCatching().getOrNull()?.plus(100)
 
     private val receiveFun = RendezvousChannelCustomTest::receive
     private val rOrNull = RendezvousChannelCustomTest::receiveOrNull
@@ -51,7 +51,7 @@ class RendezvousChannelCustomTest : VerifierState() {
     private val pollFun = RendezvousChannelCustomTest::poll
 
     @Test
-    fun testCancellation_01() {
+    fun testCancellation_01() = withLincheckTransformer {
         verify(RendezvousChannelCustomTest::class.java, LinearizabilityVerifier::class.java, {
             parallel {
                 thread {
@@ -65,7 +65,7 @@ class RendezvousChannelCustomTest : VerifierState() {
     }
 
     @Test
-    fun testCancellation_02() {
+    fun testCancellation_02() = withLincheckTransformer {
         verify(RendezvousChannelCustomTest::class.java, LinearizabilityVerifier::class.java, {
             parallel {
                 thread {
@@ -79,7 +79,7 @@ class RendezvousChannelCustomTest : VerifierState() {
     }
 
     @Test
-    fun testCancellation_03() {
+    fun testCancellation_03() = withLincheckTransformer {
         verify(RendezvousChannelCustomTest::class.java, LinearizabilityVerifier::class.java, {
             parallel {
                 thread {
@@ -93,7 +93,7 @@ class RendezvousChannelCustomTest : VerifierState() {
     }
 
     @Test
-    fun testCancellation_04() {
+    fun testCancellation_04() = withLincheckTransformer {
         verify(RendezvousChannelCustomTest::class.java, LinearizabilityVerifier::class.java, {
             parallel {
                 thread {
@@ -107,7 +107,7 @@ class RendezvousChannelCustomTest : VerifierState() {
     }
 
     @Test
-    fun testCancellation_05() {
+    fun testCancellation_05() = withLincheckTransformer {
         verify(RendezvousChannelCustomTest::class.java, LinearizabilityVerifier::class.java, {
             parallel {
                 thread {

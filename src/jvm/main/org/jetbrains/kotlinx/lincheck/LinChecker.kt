@@ -21,11 +21,11 @@
  */
 package org.jetbrains.kotlinx.lincheck
 
-import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.verifier.*
-import kotlin.reflect.*
+import org.jetbrains.kotlinx.lincheck.annotations.LogLevel
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
+import org.jetbrains.kotlinx.lincheck.verifier.Verifier
+import kotlin.reflect.KClass
 
 /**
  * This class runs concurrent tests.
@@ -53,13 +53,16 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
     /**
      * @return TestReport with information about concurrent test run.
      */
+    @Synchronized
     internal fun checkImpl(): LincheckFailure? {
-        check(testConfigurations.isNotEmpty()) { "No Lincheck test configuration to run" }
-        for (testCfg in testConfigurations) {
-            val failure = testCfg.checkImpl()
-            if (failure != null) return failure
+        withLincheckTransformer {
+            check(testConfigurations.isNotEmpty()) { "No Lincheck test configuration to run" }
+            for (testCfg in testConfigurations) {
+                val failure = testCfg.checkImpl()
+                if (failure != null) return failure
+            }
+            return null
         }
-        return null
     }
 
     private fun CTestConfiguration.checkImpl(): LincheckFailure? {
@@ -151,7 +154,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             validationFunctions = testStructure.validationFunctions,
             stateRepresentationMethod = testStructure.stateRepresentation,
             verifier = verifier
-        ).run()
+        ).use { it.run() }
 
     private fun ExecutionScenario.copy() = ExecutionScenario(
         ArrayList(initExecution),

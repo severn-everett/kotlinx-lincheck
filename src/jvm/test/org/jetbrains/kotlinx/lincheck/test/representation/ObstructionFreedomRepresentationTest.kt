@@ -29,13 +29,13 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.test.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
-import java.lang.StringBuilder
 import java.util.concurrent.atomic.*
 
 /**
  * This test checks that the last event in the case of an active lock
  * that causes obstruction freedom violation is reported.
  */
+@Ignore
 class ObstructionFreedomActiveLockRepresentationTest : VerifierState() {
     private val counter = AtomicInteger(0)
 

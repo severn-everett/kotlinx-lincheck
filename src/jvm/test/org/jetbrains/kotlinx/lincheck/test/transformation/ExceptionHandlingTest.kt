@@ -21,27 +21,22 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.transformation
 
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.test.*
-import java.util.concurrent.*
+import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
+import org.jetbrains.kotlinx.lincheck.test.AbstractLincheckTest
 
-class TransformInterfaceFromJUCWithRemappedClassTest : AbstractLincheckTest() {
-    private val q: BlockingQueue<Int> = ArrayBlockingQueue(10)
-
-    init {
-        q.add(10)
-    }
+class ExceptionHandlingTest : AbstractLincheckTest(IncorrectResultsFailure::class) {
+    private var counter = 0
 
     @Operation
-    fun op() = q.poll(100, TimeUnit.DAYS)
-
-    override fun <O : Options<O, *>> O.customize() {
-        iterations(1)
-        actorsBefore(0)
-        threads(1)
-        actorsPerThread(1)
-        actorsAfter(0)
-        requireStateEquivalenceImplCheck(false)
+    fun inc() = try {
+        badMethod()
+    } catch(e: Throwable) {
+        counter++
+        counter++
     }
+
+    private fun badMethod(): Int = error("bad method")
+
+    override fun extractState(): Any = counter
 }

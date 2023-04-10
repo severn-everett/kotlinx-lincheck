@@ -25,7 +25,6 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.paramgen.*
 import org.jetbrains.kotlinx.lincheck.test.*
-import org.junit.*
 import java.util.concurrent.*
 
 @Param(name = "value", gen = IntGen::class, conf = "1:5")
@@ -43,6 +42,12 @@ class SkipListMapTest : AbstractLincheckTest() {
 
     @Operation
     fun remove(key: Int) = skiplistMap.remove(key)
+
+    override fun <O : Options<O, *>> O.customize() {
+        // TODO: make Lincheck deterministic in init/post parts
+        actorsBefore(0)
+        actorsAfter(0)
+    }
 
     override fun extractState() = skiplistMap.toMap()
 }

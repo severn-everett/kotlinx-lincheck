@@ -22,15 +22,21 @@
 
 package org.jetbrains.kotlinx.lincheck.verifier
 
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CancellableContinuation
+import kotlinx.coroutines.Job
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.CancellableContinuationHolder.storedLastCancellableCont
-import org.jetbrains.kotlinx.lincheck.verifier.LTS.*
+import org.jetbrains.kotlinx.lincheck.verifier.LTS.State
 import org.jetbrains.kotlinx.lincheck.verifier.OperationType.*
+import sun.nio.ch.lincheck.Injections.storedLastCancellableCont
 import java.util.*
-import kotlin.collections.HashMap
-import kotlin.coroutines.*
-import kotlin.math.*
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.set
+import kotlin.coroutines.AbstractCoroutineContextElement
+import kotlin.coroutines.Continuation
+import kotlin.coroutines.ContinuationInterceptor
+import kotlin.coroutines.CoroutineContext
+import kotlin.math.max
 
 typealias RemappingFunction = IntArray
 typealias ResumedTickets = Set<Int>
@@ -55,11 +61,7 @@ typealias ResumedTickets = Set<Int>
  * Practically, Kotlin implementation of such operations via suspend functions is supported.
  */
 
-class LTS(sequentialSpecification: Class<*>) {
-    // we should transform the specification with `CancellabilitySupportClassTransformer`
-    private val sequentialSpecification: Class<*> = TransformationClassLoader { cv -> CancellabilitySupportClassTransformer(cv)}
-                                                    .loadClass(sequentialSpecification.name)!!
-
+class LTS(private val sequentialSpecification: Class<*>) {
     /**
      * Cache with all LTS states in order to reuse the equivalent ones.
      * Equivalency relation among LTS states is defined by the [StateInfo] class.
@@ -236,7 +238,7 @@ class LTS(sequentialSpecification: Class<*>) {
             }
         }
         if (res === Suspended) {
-            val cont = storedLastCancellableCont
+            val cont = storedLastCancellableCont as CancellableContinuation<*>?
             storedLastCancellableCont = null
             if (cont !== null) continuationsMap[this] = cont
             // Operation suspended it's execution.
@@ -370,8 +372,8 @@ private class StateInfo(
 
     val maxTicket: Int
         get() = max(
-            suspendedOperations.maxBy { it.ticket }?.ticket ?: NO_TICKET,
-            resumedOperations.maxBy { it.resumedActorTicket }?.resumedActorTicket ?: NO_TICKET
+            suspendedOperations.maxByOrNull { it.ticket }?.ticket ?: NO_TICKET,
+            resumedOperations.maxByOrNull { it.resumedActorTicket }?.resumedActorTicket ?: NO_TICKET
         )
 }
 

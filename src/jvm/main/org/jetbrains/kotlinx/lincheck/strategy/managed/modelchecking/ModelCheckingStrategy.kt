@@ -242,9 +242,9 @@ internal class ModelCheckingStrategy(
         fun chooseThread(iThread: Int): Int =
             if (nextThreadToSwitch.hasNext()) {
                 // Use the predefined choice.
-                val result = nextThreadToSwitch.next()
-                check(result in switchableThreads(iThread))
-                result
+                nextThreadToSwitch.next().also {
+                    check(it in switchableThreads(iThread))
+                }
             } else {
                 // There is no predefined choice.
                 // This can happen if there were forced thread switches after the last predefined one
@@ -263,7 +263,7 @@ internal class ModelCheckingStrategy(
          */
         fun newExecutionPosition(iThread: Int) {
             executionPosition++
-            if (executionPosition > switchPositions.lastOrNull() ?: -1) {
+            if (executionPosition > (switchPositions.lastOrNull() ?: -1)) {
                 // Add a new thread choosing node corresponding to the switch at the current execution position.
                 lastNotInitializedNodeChoices?.add(Choice(ThreadChoosingNode(switchableThreads(iThread)), executionPosition))
             }

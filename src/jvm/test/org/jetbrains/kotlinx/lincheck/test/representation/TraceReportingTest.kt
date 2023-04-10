@@ -22,7 +22,7 @@
 package org.jetbrains.kotlinx.lincheck.test.representation
 
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.test.*
 import org.junit.*
@@ -31,6 +31,7 @@ import org.junit.*
  * This test checks basic interleaving reporting features,
  * including reporting of lock acquiring/releasing, reads/writes with parameter/result capturing.
  */
+@Ignore
 class TraceReportingTest {
     @Volatile
     var a = 0

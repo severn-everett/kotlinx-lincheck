@@ -23,11 +23,11 @@ package org.jetbrains.kotlinx.lincheck.test
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
+import sun.nio.ch.lincheck.*
 import kotlin.reflect.*
 
 abstract class AbstractLincheckTest(
@@ -48,6 +48,7 @@ abstract class AbstractLincheckTest(
                 "This test has failed with an unexpected error: \n $failure"
             }
         }
+//        waitUntilAllLincheckTehreadsAreFinished()
     }
 
     @Test(timeout = TIMEOUT)
@@ -81,4 +82,15 @@ fun checkTraceHasNoLincheckEvents(trace: String) {
     val testPackageOccurrences = trace.split("org.jetbrains.kotlinx.lincheck.test.").size - 1
     val lincheckPackageOccurrences = trace.split("org.jetbrains.kotlinx.lincheck.").size - 1
     check(testPackageOccurrences == lincheckPackageOccurrences) { "Internal Lincheck events were found in the trace" }
+}
+
+private fun waitUntilAllLincheckThreadsAreFinished() {
+    val deadline = System.currentTimeMillis() + 1000
+    while (true) {
+        if (Thread.getAllStackTraces().keys.filterIsInstance<TestThread>().isEmpty())
+            return
+        if (System.currentTimeMillis() > deadline)
+            error("Lincheck threads has not been finished")
+        Thread.yield()
+    }
 }

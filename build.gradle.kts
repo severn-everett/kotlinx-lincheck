@@ -1,6 +1,6 @@
-import groovy.util.Node
-import groovy.util.NodeList
-import kotlinx.team.infra.mavenPublicationsPom
+
+import groovy.util.*
+import kotlinx.team.infra.*
 import org.gradle.jvm.tasks.Jar
 
 // atomicfu
@@ -16,7 +16,6 @@ plugins {
     java
     kotlin("multiplatform")
     id("maven-publish")
-    id("maven")
     id("kotlinx.team.infra") version "0.3.0-dev-64"
 }
 
@@ -28,14 +27,6 @@ repositories {
 kotlin {
     jvm {
         withJava()
-
-        val main by compilations.getting {
-            kotlinOptions.jvmTarget = "1.8"
-        }
-
-        val test by compilations.getting {
-            kotlinOptions.jvmTarget = "1.8"
-        }
     }
 
     sourceSets {
@@ -46,6 +37,7 @@ kotlin {
             val kotlinxCoroutinesVersion: String by project
             val asmVersion: String by project
             val reflectionsVersion: String by project
+            val byte_buddy_version: String by project
             dependencies {
                 api("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
                 api("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion")
@@ -54,6 +46,8 @@ kotlin {
                 api("org.ow2.asm:asm-commons:$asmVersion")
                 api("org.ow2.asm:asm-util:$asmVersion")
                 api("org.reflections:reflections:$reflectionsVersion")
+                api("net.bytebuddy:byte-buddy:$byte_buddy_version")
+                api("net.bytebuddy:byte-buddy-agent:$byte_buddy_version")
             }
         }
 
@@ -71,8 +65,8 @@ kotlin {
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_1_8
+    sourceCompatibility = JavaVersion.VERSION_1_9
+    targetCompatibility = JavaVersion.VERSION_1_9
 }
 
 sourceSets.main {
@@ -89,8 +83,6 @@ tasks {
     }
     withType<Test> {
         maxParallelForks = 1
-        jvmArgs("--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
-                "--add-exports", "java.base/jdk.internal.util=ALL-UNNAMED")
     }
 
     withType<Jar> {

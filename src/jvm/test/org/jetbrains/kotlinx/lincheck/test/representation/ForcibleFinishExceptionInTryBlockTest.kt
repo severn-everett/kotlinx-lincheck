@@ -53,6 +53,7 @@ class ForcibleFinishExceptionInTryBlockTest {
         val failure = options.checkImpl(this::class.java)
         check(failure != null) { "the test should fail" }
         val forcibleFinishExceptionName = ForcibleExecutionFinishException::class.simpleName!!
+        (failure as UnexpectedExceptionFailure).exception.printStackTrace()
         check(failure is DeadlockWithDumpFailure) { "$forcibleFinishExceptionName overrode deadlock because of try-finally" }
         val log = StringBuilder().appendFailure(failure).toString()
         check(forcibleFinishExceptionName !in log) {

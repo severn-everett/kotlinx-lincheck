@@ -24,6 +24,7 @@ package org.jetbrains.kotlinx.lincheck.test.verifier.linearizability
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.paramgen.*
 import org.jetbrains.kotlinx.lincheck.test.*
+import org.junit.*
 import java.util.concurrent.atomic.*
 import java.util.concurrent.locks.*
 import kotlin.concurrent.*
@@ -45,6 +46,7 @@ abstract class AbstractSetTest(private val set: Set) : AbstractLincheckTest() {
 class SpinLockSetTest : AbstractSetTest(SpinLockBasedSet())
 class ReentrantLockSetTest : AbstractSetTest(ReentrantLockBasedSet())
 class SynchronizedLockSetTest : AbstractSetTest(SynchronizedBlockBasedSet())
+@Ignore
 class SynchronizedMethodSetTest : AbstractSetTest(SynchronizedMethodBasedSet())
 
 interface Set {

@@ -23,7 +23,6 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
-import org.jetbrains.kotlinx.lincheck.TransformationClassLoader.*
 import java.math.*
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
@@ -39,14 +38,13 @@ data class Trace(val trace: List<TracePoint>, val verboseTrace: Boolean)
  * [callStackTrace] helps to understand whether two events
  * happened in the same, nested, or disjoint methods.
  */
-sealed class TracePoint(val iThread: Int, val actorId: Int, internal val callStackTrace: CallStackTrace) {
+sealed class TracePoint(val iThread: Int, val actorId: Int, callStackTrace: CallStackTrace) {
+    internal val callStackTrace = callStackTrace.toList()
     protected abstract fun toStringImpl(): String
     override fun toString(): String = toStringImpl()
 }
 
 internal typealias CallStackTrace = List<CallStackTraceElement>
-internal typealias TracePointConstructor = (iThread: Int, actorId: Int, CallStackTrace) -> TracePoint
-internal typealias CodeLocationTracePointConstructor = (iThread: Int, actorId: Int, CallStackTrace, StackTraceElement) -> TracePoint
 
 internal class SwitchEventTracePoint(
     iThread: Int, actorId: Int,
@@ -96,7 +94,7 @@ internal class ReadTracePoint(
             append("$fieldName.")
         append("READ")
         append(": ${adornedStringRepresentation(value)}")
-        append(" at ${stackTraceElement.shorten()}")
+        append(" at ${stackTraceElement.fileName + ":" + stackTraceElement.lineNumber}")
     }.toString()
 
     fun initializeReadValue(value: Any?) {
@@ -117,7 +115,7 @@ internal class WriteTracePoint(
             append("$fieldName.")
         append("WRITE(")
         append(adornedStringRepresentation(value))
-        append(") at ${stackTraceElement.shorten()}")
+        append(") at ${stackTraceElement.fileName + ":" + stackTraceElement.lineNumber}")
     }.toString()
 
     fun initializeWrittenValue(value: Any?) {
@@ -128,7 +126,7 @@ internal class WriteTracePoint(
 internal class MethodCallTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
-    private val methodName: String,
+    private val methodName: String, // TODO: owner
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
     private var returnedValue: Any? = NO_VALUE
@@ -145,11 +143,11 @@ internal class MethodCallTracePoint(
         if (parameters != null)
             append(parameters!!.joinToString(",", transform = ::adornedStringRepresentation))
         append(")")
-        if (returnedValue != NO_VALUE)
+        if (returnedValue != NO_VALUE && returnedValue != VoidResult)
             append(": ${adornedStringRepresentation(returnedValue)}")
         else if (thrownException != null && thrownException != ForcibleExecutionFinishException)
             append(": threw ${thrownException!!.javaClass.simpleName}")
-        append(" at ${stackTraceElement.shorten()}")
+        append(" at ${stackTraceElement.fileName + ":" + stackTraceElement.lineNumber}")
     }.toString()
 
     fun initializeReturnedValue(value: Any?) {
@@ -175,7 +173,7 @@ internal class MonitorEnterTracePoint(
     callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
-    override fun toStringImpl(): String = "MONITORENTER at " + stackTraceElement.shorten()
+    override fun toStringImpl(): String = "MONITORENTER at " + stackTraceElement.fileName + ":" + stackTraceElement.lineNumber
 }
 
 internal class MonitorExitTracePoint(
@@ -183,7 +181,7 @@ internal class MonitorExitTracePoint(
     callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
-    override fun toStringImpl(): String = "MONITOREXIT at " + stackTraceElement.shorten()
+    override fun toStringImpl(): String = "MONITOREXIT at " + stackTraceElement.fileName + ":" + stackTraceElement.lineNumber
 }
 
 internal class WaitTracePoint(
@@ -191,7 +189,7 @@ internal class WaitTracePoint(
     callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
-    override fun toStringImpl(): String = "WAIT at " + stackTraceElement.shorten()
+    override fun toStringImpl(): String = "WAIT at " + stackTraceElement.fileName + ":" + stackTraceElement.lineNumber
 }
 
 internal class NotifyTracePoint(
@@ -199,7 +197,7 @@ internal class NotifyTracePoint(
     callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
-    override fun toStringImpl(): String = "NOTIFY at " + stackTraceElement.shorten()
+    override fun toStringImpl(): String = "NOTIFY at " + stackTraceElement.fileName + ":" + stackTraceElement.lineNumber
 }
 
 internal class ParkTracePoint(
@@ -207,7 +205,7 @@ internal class ParkTracePoint(
     callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
-    override fun toStringImpl(): String = "PARK at " + stackTraceElement.shorten()
+    override fun toStringImpl(): String = "PARK at " + stackTraceElement.fileName + ":" + stackTraceElement.lineNumber
 }
 
 internal class UnparkTracePoint(
@@ -215,7 +213,7 @@ internal class UnparkTracePoint(
     callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
-    override fun toStringImpl(): String = "UNPARK at " + stackTraceElement.shorten()
+    override fun toStringImpl(): String = "UNPARK at " + stackTraceElement.fileName + ":" + stackTraceElement.lineNumber
 }
 
 internal class CoroutineCancellationTracePoint(
@@ -308,7 +306,7 @@ private val Class<out Any>?.isImmutableWithNiceToString get() = this?.canonicalN
         kotlinx.coroutines.internal.Symbol::class.java,
     ).map { it.canonicalName } +
     listOf(
-        REMAPPED_PACKAGE_CANONICAL_NAME + "java.util.Collections.SingletonList",
-        REMAPPED_PACKAGE_CANONICAL_NAME + "java.util.Collections.SingletonMap",
-        REMAPPED_PACKAGE_CANONICAL_NAME + "java.util.Collections.SingletonSet"
+        "java.util.Collections.SingletonList",
+        "java.util.Collections.SingletonMap",
+        "java.util.Collections.SingletonSet"
     )

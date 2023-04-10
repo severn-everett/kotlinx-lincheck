@@ -24,9 +24,9 @@ package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.LoggingLevel.*
 import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import sun.nio.ch.lincheck.*
 import java.io.*
 
 class Reporter constructor(val logLevel: LoggingLevel) {
@@ -69,7 +69,7 @@ internal fun <T> printInColumnsCustom(
         groupedObjects: List<List<T>>,
         joinColumns: (List<String>) -> String
 ): String {
-    val nRows = groupedObjects.map { it.size }.max() ?: 0
+    val nRows = groupedObjects.map { it.size }.maxOrNull() ?: 0
     val nColumns = groupedObjects.size
     val rows = (0 until nRows).map { rowIndex ->
         (0 until nColumns)
@@ -77,7 +77,7 @@ internal fun <T> printInColumnsCustom(
                 .map { it.getOrNull(rowIndex)?.toString().orEmpty() } // print empty strings for empty cells
     }
     val columnWidths: List<Int> = (0 until nColumns).map { columnIndex ->
-        (0 until nRows).map { rowIndex -> rows[rowIndex][columnIndex].length }.max() ?: 0
+        (0 until nRows).map { rowIndex -> rows[rowIndex][columnIndex].length }.maxOrNull() ?: 0
     }
     return (0 until nRows)
             .map { rowIndex -> rows[rowIndex].mapIndexed { columnIndex, cell -> cell.padEnd(columnWidths[columnIndex]) } }
@@ -117,8 +117,8 @@ private fun uniteActorsAndResultsAligned(actors: List<Actor>, results: List<Resu
     }
     val actorRepresentations = actors.map { it.toString() }
     val resultRepresentations = results.map { it.result.toString() }
-    val maxActorLength = actorRepresentations.map { it.length }.max()!!
-    val maxResultLength = resultRepresentations.map { it.length }.max()!!
+    val maxActorLength = actorRepresentations.map { it.length }.maxOrNull()!!
+    val maxResultLength = resultRepresentations.map { it.length }.maxOrNull()!!
     return actors.indices.map { i ->
         val actorRepr = actorRepresentations[i]
         val resultRepr = resultRepresentations[i]
@@ -184,14 +184,14 @@ private fun StringBuilder.appendDeadlockWithDumpFailure(failure: DeadlockWithDum
     appendExecutionScenario(failure.scenario)
     appendLine()
     for ((t, stackTrace) in failure.threadDump) {
-        val threadNumber = if (t is FixedActiveThreadsExecutor.TestThread) t.iThread.toString() else "?"
+        val threadNumber = if (t is TestThread) t.iThread.toString() else "?"
         appendLine("Thread-$threadNumber:")
         stackTrace.map {
-            StackTraceElement(it.className.removePrefix(TransformationClassLoader.REMAPPED_PACKAGE_CANONICAL_NAME), it.methodName, it.fileName, it.lineNumber)
+            StackTraceElement(it.className, it.methodName, it.fileName, it.lineNumber)
         }.map { it.toString() }.filter { line ->
             "org.jetbrains.kotlinx.lincheck.strategy" !in line
-                && "org.jetbrains.kotlinx.lincheck.runner" !in line
-                && "org.jetbrains.kotlinx.lincheck.UtilsKt" !in line
+                    && "org.jetbrains.kotlinx.lincheck.runner" !in line
+                    && "org.jetbrains.kotlinx.lincheck.UtilsKt" !in line
         }.forEach { appendLine("\t$it") }
     }
     return this
