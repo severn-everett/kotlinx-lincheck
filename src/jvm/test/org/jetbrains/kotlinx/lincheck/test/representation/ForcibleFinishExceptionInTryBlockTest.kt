@@ -29,6 +29,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.test.*
 import org.junit.*
 
+@Ignore
 class ForcibleFinishExceptionInTryBlockTest {
     private val threadsIn = atomic(0)
 

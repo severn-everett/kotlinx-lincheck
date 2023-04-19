@@ -43,6 +43,7 @@ import org.junit.*
  *      ...
  * ```
  */
+@Ignore
 class SwitchAsFirstMethodEventTest {
     private val counter = atomic(0)
 

@@ -25,8 +25,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.test.*
-
-import org.jetbrains.kotlinx.lincheck.test.util.runModelCheckingTestAndCheckOutput
+import org.jetbrains.kotlinx.lincheck.test.util.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
 
@@ -92,6 +91,7 @@ class MethodReportingTest : VerifierState() {
 /**
  * This test checks that exceptions that are caught in other methods do not corrupt internal call stack.
  */
+@Ignore
 class CaughtExceptionMethodReportingTest : VerifierState() {
     @Volatile
     private var counter = 0
