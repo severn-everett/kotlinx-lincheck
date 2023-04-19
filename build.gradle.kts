@@ -27,6 +27,14 @@ repositories {
 kotlin {
     jvm {
         withJava()
+
+        val main by compilations.getting {
+            kotlinOptions.jvmTarget = "11"
+        }
+
+        val test by compilations.getting {
+            kotlinOptions.jvmTarget = "11"
+        }
     }
 
     sourceSets {
@@ -56,17 +64,19 @@ kotlin {
 
             val junitVersion: String by project
             val jctoolsVersion: String by project
+            val mockkVersion: String by project
             dependencies {
                 implementation("junit:junit:$junitVersion")
                 implementation("org.jctools:jctools-core:$jctoolsVersion")
+                implementation("io.mockk:mockk:${mockkVersion}")
             }
         }
     }
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_1_9
-    targetCompatibility = JavaVersion.VERSION_1_9
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
 }
 
 sourceSets.main {
@@ -75,6 +85,9 @@ sourceSets.main {
 
 sourceSets.test {
     java.srcDirs("src/jvm/test")
+    resources {
+        srcDir("src/jvm/test/resources")
+    }
 }
 
 tasks {
@@ -89,9 +102,10 @@ tasks {
         manifest {
             val inceptionYear: String by project
             val lastCopyrightYear: String by project
-            attributes("Copyright" to
-                "Copyright (C) 2015 - 2019 Devexperts, LLC\n                                " +
-                "Copyright (C) $inceptionYear - $lastCopyrightYear JetBrains, s.r.o."
+            attributes(
+                "Copyright" to
+                        "Copyright (C) 2015 - 2019 Devexperts, LLC\n                                " +
+                        "Copyright (C) $inceptionYear - $lastCopyrightYear JetBrains, s.r.o."
             )
         }
     }

@@ -46,7 +46,6 @@ class CancellationHandlingTest : AbstractLincheckTest() {
     }
 
     override fun <O : Options<O, *>> O.customize() {
-        requireStateEquivalenceImplCheck(false)
         actorsBefore(0)
         actorsAfter(0)
         iterations(1)

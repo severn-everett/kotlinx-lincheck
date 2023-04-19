@@ -78,7 +78,6 @@ abstract class AbstractPromptCancellationTest(
         threads(2)
         actorsPerThread(1)
         actorsAfter(0)
-        requireStateEquivalenceImplCheck(false)
         sequentialSpecification?.let { sequentialSpecification(it.java) }
     }
 }

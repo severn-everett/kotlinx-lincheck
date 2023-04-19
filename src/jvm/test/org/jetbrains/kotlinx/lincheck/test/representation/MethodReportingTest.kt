@@ -25,6 +25,8 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.test.*
+
+import org.jetbrains.kotlinx.lincheck.test.util.runModelCheckingTestAndCheckOutput
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
 
@@ -99,7 +101,7 @@ class CaughtExceptionMethodReportingTest : VerifierState() {
     fun operation(): Int {
         try {
             return badMethod()
-        } catch(e: Throwable) {
+        } catch (e: Throwable) {
             counter++
             return counter++
         }
@@ -113,16 +115,10 @@ class CaughtExceptionMethodReportingTest : VerifierState() {
     override fun extractState(): Any = counter
 
     @Test
-    fun test() {
-        val options = ModelCheckingOptions()
-            .actorsPerThread(1)
-            .actorsBefore(0)
-            .actorsAfter(0)
-        val failure = options.checkImpl(this::class.java)
-        check(failure != null) { "the test should fail" }
-        val log = StringBuilder().appendFailure(failure).toString()
-        check("useless" !in log) { "Due to bad call stack these accesses appear to be in the same method as thread switches" }
-        check("badMethod(): threw NotImplementedError" in log) { "thrown exception is not shown properly" }
-        checkTraceHasNoLincheckEvents(log)
+    fun test() = runModelCheckingTestAndCheckOutput("method_reporting.txt") {
+        actorsPerThread(1)
+        actorsBefore(0)
+        actorsAfter(0)
     }
+
 }

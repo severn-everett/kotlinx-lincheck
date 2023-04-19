@@ -27,17 +27,16 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.junit.*
 
-@OpGroupConfig(name = "consumer", nonParallel = true)
 class MPSCQueueTest {
     private val queue = MpscLinkedAtomicQueue<Int>()
 
     @Operation
     public fun offer(x: Int) = queue.offer(x)
 
-    @Operation(group = "consumer")
+    @Operation(nonParallelGroup = "consumers")
     public fun poll(): Int? = queue.poll()
 
-    @Operation(group = "consumer")
+    @Operation(nonParallelGroup = "consumers")
     public fun peek(): Int? = queue.peek()
 
     @Test

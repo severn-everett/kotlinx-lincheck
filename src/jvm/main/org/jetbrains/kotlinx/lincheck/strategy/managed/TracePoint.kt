@@ -27,7 +27,7 @@ import java.math.*
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
 
-data class Trace(val trace: List<TracePoint>, val verboseTrace: Boolean)
+data class Trace(val trace: List<TracePoint>)
 
 /**
  * Essentially, a trace is a list of trace points, which represent
@@ -228,7 +228,7 @@ internal class CoroutineCancellationTracePoint(
     }
 
     fun initializeException(e: Throwable) {
-        this.exception = e;
+        this.exception = e
     }
 
     override fun toStringImpl(): String {

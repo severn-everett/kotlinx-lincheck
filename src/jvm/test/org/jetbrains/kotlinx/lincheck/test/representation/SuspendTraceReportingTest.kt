@@ -21,18 +21,13 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.representation
 
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.sync.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.checkImpl
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.jetbrains.kotlinx.lincheck.test.checkTraceHasNoLincheckEvents
-import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
-import org.junit.Ignore
-import org.junit.Test
+import org.jetbrains.kotlinx.lincheck.test.util.runModelCheckingTestAndCheckOutput
+import org.jetbrains.kotlinx.lincheck.verifier.*
+import org.junit.*
 
 
-@Ignore
 class SuspendTraceReportingTest : VerifierState() {
     private val lock = Mutex()
     private var canEnterForbiddenBlock: Boolean = false
@@ -61,22 +56,9 @@ class SuspendTraceReportingTest : VerifierState() {
     override fun extractState(): Any = counter
 
     @Test
-    fun test() {
-        val failure = ModelCheckingOptions()
-            .actorsPerThread(1)
-            .actorsBefore(0)
-            .actorsAfter(0)
-            .checkImpl(this::class.java)
-        checkNotNull(failure) { "the test should fail" }
-        val log = failure.toString()
-        check("label" !in log) { "suspend state machine related fields should not be reported" }
-        check("L$0" !in log) { "suspend state machine related fields should not be reported" }
-        check(log.numberOfOccurrences("foo()") == 2) {
-            "suspended function should be mentioned exactly twice (once in parallel and once in parallel execution)"
-        }
-        check("barStarted.READ: true" in log) { "this code location after suspension should be reported" }
-        checkTraceHasNoLincheckEvents(log)
+    fun test() = runModelCheckingTestAndCheckOutput("suspend_trace_reporting.txt") {
+        actorsPerThread(1)
+        actorsBefore(0)
+        actorsAfter(0)
     }
-
-    private fun String.numberOfOccurrences(text: String): Int = split(text).size - 1
 }

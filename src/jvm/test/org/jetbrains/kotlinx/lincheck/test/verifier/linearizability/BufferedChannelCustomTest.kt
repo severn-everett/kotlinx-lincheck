@@ -21,13 +21,13 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.verifier.linearizability
 
-import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.*
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.test.verifier.verify
-import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
-import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier
-import org.junit.Test
-import java.util.concurrent.CancellationException
+import org.jetbrains.kotlinx.lincheck.test.verifier.*
+import org.jetbrains.kotlinx.lincheck.verifier.*
+import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*
+import org.junit.*
+import java.util.concurrent.*
 
 class BufferedChannelCustomTest : VerifierState() {
     private val ch = Channel<Int>(3)
@@ -55,13 +55,17 @@ class BufferedChannelCustomTest : VerifierState() {
     }
 
     fun poll() = try {
-        ch.tryReceive().getOrNull()
+        val result = ch.tryReceive()
+        if (result.isSuccess) result.getOrThrow()
+        else result.exceptionOrNull().let { if (it == null) null else throw it }
     } catch (e: NumberedCancellationException) {
         e.testResult
     }
 
     fun offer(value: Int) = try {
-        ch.trySend(value).isSuccess
+        val results = ch.trySend(value)
+        if (results.isSuccess) true
+        else results.exceptionOrNull().let { if (it == null) false else throw it }
     } catch (e: NumberedCancellationException) {
         e.testResult
     }

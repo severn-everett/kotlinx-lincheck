@@ -21,7 +21,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.test.transformation
 
-import org.jetbrains.kotlinx.lincheck.Options
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.paramgen.ParameterGenerator
@@ -98,7 +98,7 @@ class CustomParameterIncorrectTest : AbstractLincheckTest(IncorrectResultsFailur
     }
 }
 
-class ValueHolderGen(conf: String) : ParameterGenerator<CustomValue> {
+class ValueHolderGen(randomProvider: RandomProvider, conf: String) : ParameterGenerator<CustomValue> {
     override fun generate(): CustomValue {
         return listOf(CustomValue(1), CustomValue(2)).random()
     }
@@ -118,7 +118,7 @@ class ListAsParameterTest : AbstractLincheckTest() {
     }
 }
 
-class JavaUtilGen(conf: String) : ParameterGenerator<List<Int>> {
+class JavaUtilGen(randomProvider: RandomProvider, conf: String) : ParameterGenerator<List<Int>> {
     override fun generate() = listOf(1, 2)
 }
 
@@ -138,6 +138,6 @@ class CustomNullParameterTest : AbstractLincheckTest() {
     }
 }
 
-class NullGen(conf: String) : ParameterGenerator<List<Int>?> {
+class NullGen(randomProvider: RandomProvider, conf: String) : ParameterGenerator<List<Int>?> {
     override fun generate() = null
 }

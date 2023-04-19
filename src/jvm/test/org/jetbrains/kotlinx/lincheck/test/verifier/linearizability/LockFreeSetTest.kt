@@ -51,7 +51,6 @@ class LockFreeSetTest {
             .addCustomScenario(scenario)
             .invocationsPerIteration(10000000)
             .iterations(0)
-            .requireStateEquivalenceImplCheck(false)
             .check(LockFreeSet::class)
     }
 }

@@ -29,14 +29,8 @@ import org.jetbrains.kotlinx.lincheck.verifier.LTS.State
 import org.jetbrains.kotlinx.lincheck.verifier.OperationType.*
 import sun.nio.ch.lincheck.Injections.storedLastCancellableCont
 import java.util.*
-import kotlin.collections.component1
-import kotlin.collections.component2
-import kotlin.collections.set
-import kotlin.coroutines.AbstractCoroutineContextElement
-import kotlin.coroutines.Continuation
-import kotlin.coroutines.ContinuationInterceptor
-import kotlin.coroutines.CoroutineContext
-import kotlin.math.max
+import kotlin.coroutines.*
+import kotlin.math.*
 
 typealias RemappingFunction = IntArray
 typealias ResumedTickets = Set<Int>
@@ -282,12 +276,6 @@ class LTS(private val sequentialSpecification: Class<*>) {
     }
 
     private fun createInitialStateInstance() = sequentialSpecification.newInstance()
-
-    fun checkStateEquivalenceImplementation(): Boolean {
-        val i1 = createInitialStateInstance()
-        val i2 = createInitialStateInstance()
-        return i1.hashCode() == i2.hashCode() && i1 == i2
-    }
 
     private fun StateInfo.computeRemappingFunction(old: StateInfo): RemappingFunction? {
         if (maxTicket == NO_TICKET) return null
