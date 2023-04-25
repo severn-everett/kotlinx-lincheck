@@ -23,10 +23,8 @@ package org.jetbrains.kotlinx.lincheck.test.verifier.linearizability
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.test.*
-import kotlin.reflect.jvm.*
 
 class ClocksTest : AbstractLincheckTest(IncorrectResultsFailure::class) {
     @Volatile
@@ -54,7 +52,7 @@ class ClocksTest : AbstractLincheckTest(IncorrectResultsFailure::class) {
 
     override fun LincheckOptionsImpl.customize() {
         sequentialImplementation = ClocksTestSequential::class.java
-        generateScenarios = false
+        generateRandomScenarios = false
         addCustomScenario {
             parallel {
                 thread {

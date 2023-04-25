@@ -47,9 +47,8 @@ class LockFreeSetTest {
         LincheckOptions {
             this as LincheckOptionsImpl
             mode = LincheckMode.Stress
-            testingTimeInSeconds = 10
-            generateScenarios = false
-            addCustomScenario(scenario)
+            generateRandomScenarios = false
+            addCustomScenario(scenario, invocations = 1_000_000)
         }.check(LockFreeSet::class)
     }
 }

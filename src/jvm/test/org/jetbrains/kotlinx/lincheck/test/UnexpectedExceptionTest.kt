@@ -46,9 +46,7 @@ class UnexpectedExceptionTest : AbstractLincheckTest(UnexpectedExceptionFailure:
 
 }
 
-class CoroutineResumedWithUnexpectedExceptionTest :
-    AbstractLincheckTest(UnexpectedExceptionFailure::class)
-{
+class CoroutineResumedWithUnexpectedExceptionTest : AbstractLincheckTest(UnexpectedExceptionFailure::class) {
     @InternalCoroutinesApi
     @Operation
     suspend fun operation() {

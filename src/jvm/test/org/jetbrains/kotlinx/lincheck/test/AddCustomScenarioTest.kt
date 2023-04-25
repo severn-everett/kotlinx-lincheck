@@ -22,7 +22,6 @@ package org.jetbrains.kotlinx.lincheck.test
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.junit.*
 
 class AddCustomScenarioTest {
@@ -43,7 +42,7 @@ class AddCustomScenarioTest {
     fun stressTest1() {
         val failure = LincheckOptions {
             this as LincheckOptionsImpl
-            generateScenarios = false
+            generateRandomScenarios = false
             addCustomScenario {
                 parallel {
                     thread { actor(::t1) }
@@ -58,7 +57,7 @@ class AddCustomScenarioTest {
     fun stressTest2() {
         val failure = LincheckOptions {
             this as LincheckOptionsImpl
-            generateScenarios = false
+            generateRandomScenarios = false
             addCustomScenario {
                 parallel {
                     thread { actor(::t1) }

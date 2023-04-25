@@ -38,7 +38,7 @@ class TransformInterfaceFromJUCWithRemappedClassTest : AbstractLincheckTest() {
 
     override fun LincheckOptionsImpl.customize() {
         testingTimeInSeconds = 1
-        generateScenarios = false
+        generateRandomScenarios = false
         addCustomScenario {
             parallel {
                 thread {

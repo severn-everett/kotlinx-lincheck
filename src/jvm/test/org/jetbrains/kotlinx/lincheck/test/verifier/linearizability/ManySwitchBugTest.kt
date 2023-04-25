@@ -24,7 +24,6 @@ package org.jetbrains.kotlinx.lincheck.test.verifier.linearizability
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.junit.*
 import java.lang.IllegalStateException
 
@@ -71,7 +70,7 @@ class ManySwitchBugTest {
         val failure = LincheckOptions {
             this as LincheckOptionsImpl
             mode = LincheckMode.ModelChecking
-            generateScenarios = false
+            generateRandomScenarios = false
             addCustomScenario {
                 parallel {
                     thread {

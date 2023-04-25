@@ -29,6 +29,8 @@ interface Planner {
     val scenarios: Sequence<ExecutionScenario>
     val iterationsPlanner: IterationsPlanner
     val invocationsPlanner: InvocationsPlanner
+
+    val minimizeFailedScenario: Boolean
 }
 
 fun Planner.runIterations(block: (Int, ExecutionScenario, InvocationsPlanner) -> LincheckFailure?): LincheckFailure? {
@@ -44,15 +46,32 @@ fun Planner.runIterations(block: (Int, ExecutionScenario, InvocationsPlanner) ->
     return null
 }
 
-internal class FixedScenariosAdaptivePlanner(
-    mode: LincheckMode,
-    testingTimeMs: Long,
-    scenarios: List<ExecutionScenario>,
-) : Planner {
-    private val planner = AdaptivePlanner(mode, testingTimeMs, scenarios.size)
-    override val iterationsPlanner = planner
-    override val invocationsPlanner = planner
-    override val scenarios = scenarios.asSequence()
+internal class CustomScenariosPlanner(
+    val scenariosOptions: List<CustomScenarioOptions>,
+) : Planner, IterationsPlanner {
+
+    override val iterationsPlanner = this
+
+    override var invocationsPlanner = FixedInvocationsPlanner(0)
+        private set
+
+    override val scenarios = scenariosOptions.asSequence().map { it.scenario }
+
+    private var iteration = 0
+
+    override fun shouldDoNextIteration(): Boolean =
+        iteration < scenariosOptions.size
+
+    override fun iterationStart() {
+        invocationsPlanner = FixedInvocationsPlanner(scenariosOptions[iteration].invocations)
+    }
+
+    override fun iterationEnd() {
+        ++iteration
+    }
+
+    override val minimizeFailedScenario: Boolean = false
+
 }
 
 internal class RandomScenariosAdaptivePlanner(
@@ -64,6 +83,7 @@ internal class RandomScenariosAdaptivePlanner(
     val maxOperations: Int,
     val generateBeforeAndAfterParts: Boolean,
     scenarioGenerator: ExecutionGenerator,
+    override val minimizeFailedScenario: Boolean,
 ) : Planner {
     private val planner = AdaptivePlanner(mode, testingTimeMs)
     override val iterationsPlanner = planner
