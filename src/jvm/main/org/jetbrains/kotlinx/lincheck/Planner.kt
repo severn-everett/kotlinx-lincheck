@@ -29,15 +29,25 @@ interface Planner {
     val scenarios: Sequence<ExecutionScenario>
     val iterationsPlanner: IterationsPlanner
     val invocationsPlanner: InvocationsPlanner
-
     val minimizeFailedScenario: Boolean
 }
 
-fun Planner.runIterations(block: (Int, ExecutionScenario, InvocationsPlanner) -> LincheckFailure?): LincheckFailure? {
+interface IterationsPlanner {
+    fun shouldDoNextIteration(iteration: Int): Boolean
+}
+
+interface InvocationsPlanner {
+    fun shouldDoNextInvocation(invocation: Int): Boolean
+}
+
+fun Planner.runIterations(
+    statisticsTracker: StatisticsTracker? = null,
+    block: (Int, ExecutionScenario, InvocationsPlanner) -> LincheckFailure?
+): LincheckFailure? {
     scenarios.forEachIndexed { i, scenario ->
-        if (!iterationsPlanner.shouldDoNextIteration())
+        if (!iterationsPlanner.shouldDoNextIteration(i))
             return null
-        iterationsPlanner.trackIteration {
+        statisticsTracker.trackIteration {
             block(i, scenario, invocationsPlanner)?.let {
                 return it
             }
@@ -50,27 +60,19 @@ internal class CustomScenariosPlanner(
     val scenariosOptions: List<CustomScenarioOptions>,
 ) : Planner, IterationsPlanner {
 
+    override val scenarios = scenariosOptions.asSequence().map { it.scenario }
+
     override val iterationsPlanner = this
 
     override var invocationsPlanner = FixedInvocationsPlanner(0)
         private set
 
-    override val scenarios = scenariosOptions.asSequence().map { it.scenario }
-
-    private var iteration = 0
-
-    override fun shouldDoNextIteration(): Boolean =
-        iteration < scenariosOptions.size
-
-    override fun iterationStart() {
-        invocationsPlanner = FixedInvocationsPlanner(scenariosOptions[iteration].invocations)
-    }
-
-    override fun iterationEnd() {
-        ++iteration
-    }
-
     override val minimizeFailedScenario: Boolean = false
+
+    override fun shouldDoNextIteration(iteration: Int): Boolean {
+        invocationsPlanner = FixedInvocationsPlanner(scenariosOptions[iteration].invocations)
+        return iteration < scenariosOptions.size
+    }
 
 }
 
@@ -82,10 +84,11 @@ internal class RandomScenariosAdaptivePlanner(
     val minOperations: Int,
     val maxOperations: Int,
     val generateBeforeAndAfterParts: Boolean,
-    scenarioGenerator: ExecutionGenerator,
     override val minimizeFailedScenario: Boolean,
+    scenarioGenerator: ExecutionGenerator,
+    statisticsTracker: StatisticsTracker,
 ) : Planner {
-    private val planner = AdaptivePlanner(mode, testingTimeMs)
+    private val planner = AdaptivePlanner(mode, testingTimeMs, statisticsTracker)
     override val iterationsPlanner = planner
     override val invocationsPlanner = planner
 
@@ -109,50 +112,9 @@ internal class RandomScenariosAdaptivePlanner(
     }
 }
 
-interface IterationsPlanner {
-    fun shouldDoNextIteration(): Boolean
-
-    fun iterationStart()
-
-    fun iterationEnd()
-}
-
-interface InvocationsPlanner {
-    fun shouldDoNextInvocation(): Boolean
-
-    fun invocationStart()
-
-    fun invocationEnd()
-}
-
-inline fun<T> IterationsPlanner.trackIteration(block: () -> T): T {
-    iterationStart()
-    try {
-        return block()
-    } finally {
-        iterationEnd()
-    }
-}
-
-inline fun<T> InvocationsPlanner.trackInvocation(block: () -> T): T {
-    invocationStart()
-    try {
-        return block()
-    } finally {
-        invocationEnd()
-    }
-}
-
-internal class FixedInvocationsPlanner(invocations: Int) : InvocationsPlanner {
-    private var remainingInvocations = invocations
-
-    override fun shouldDoNextInvocation() = remainingInvocations > 0
-
-    override fun invocationStart() {}
-
-    override fun invocationEnd() {
-        remainingInvocations--
-    }
+internal class FixedInvocationsPlanner(val totalInvocations: Int) : InvocationsPlanner {
+    override fun shouldDoNextInvocation(invocation: Int) =
+        invocation < totalInvocations
 }
 
 /**
@@ -172,10 +134,9 @@ internal class AdaptivePlanner(
      */
     testingTimeMs: Long,
     /**
-     * A strict bound on the number of iterations that should be definitely performed.
-     * If negative (by default), then adaptive iterations planning is used.
+     * Statistics tracker.
      */
-    iterationsStrictBound: Int = -1,
+    val statisticsTracker: StatisticsTracker,
 ) : IterationsPlanner, InvocationsPlanner {
 
     /**
@@ -185,65 +146,30 @@ internal class AdaptivePlanner(
         private set
 
     /**
-     * Total amount of time already spent on testing.
-     */
-    var runningTimeNano: Long = 0
-        private set
-
-    /**
      * Remaining amount of time for testing.
      */
     val remainingTimeNano: Long
-        get() = testingTimeNano - runningTimeNano
+        get() = testingTimeNano - statisticsTracker.runningTimeNano
 
     /**
      * Testing progress: floating-point number in range [0.0 .. 1.0],
      * representing a fraction of spent testing time.
      */
     val testingProgress: Double
-        get() = runningTimeNano / testingTimeNano.toDouble()
-
-    /**
-     * Current iteration number.
-      */
-    var iteration: Int = 0
-        private set
-
-    val adaptiveIterationsBound: Boolean =
-        iterationsStrictBound < 0
+        get() = statisticsTracker.runningTimeNano / testingTimeNano.toDouble()
 
     /**
      * Upper bound on the number of iterations.
      * Adjusted automatically after each iteration.
      */
-    private var iterationsBound = if (adaptiveIterationsBound)
-        INITIAL_ITERATIONS_BOUND
-    else
-        iterationsStrictBound
+    private var iterationsBound = INITIAL_ITERATIONS_BOUND
 
     /**
      * Number of remaining iterations, calculated based on current iterations bound.
      */
     private val remainingIterations: Int
-        get() = iterationsBound - iteration
+        get() = iterationsBound - statisticsTracker.iteration
 
-    /**
-     * An array keeping running time of all iterations.
-     */
-    val iterationsRunningTimeNano: List<Long>
-        get() = _iterationsRunningTimeNano
-
-    /**
-     * Array keeping number of invocations executed for each iteration
-     */
-    val iterationsInvocationCount: List<Int>
-        get() = _iterationsInvocationCount
-
-    /**
-     * Current invocation number within current iteration.
-     */
-    var invocation: Int = 0
-        private set
 
     /**
      * Upper bound on the number of invocations per iteration.
@@ -265,79 +191,36 @@ internal class AdaptivePlanner(
         else -> throw IllegalArgumentException()
     }
 
-    // an array keeping running time of all iterations
-    private val _iterationsRunningTimeNano = mutableListOf<Long>()
-
-    // and array keeping number of invocations executed for each iteration
-    private val _iterationsInvocationCount = mutableListOf<Int>()
-
     // time limit allocated to current iteration
     private var currentIterationTimeBoundNano = testingTimeNano / iterationsBound
 
+    // remaining time for current iteration
     private val currentIterationRemainingTimeNano: Long
-        get() = currentIterationTimeBoundNano - iterationsRunningTimeNano[iteration]
+        get() = (currentIterationTimeBoundNano - statisticsTracker.currentIterationRunningTimeNano).coerceAtMost(0)
 
-    // an array keeping running time of last N invocations
-    private val invocationsRunningTimeNano =
-        LongArray(ADJUSTMENT_THRESHOLD) { 0 }
+    private var currentIterationOverdueFlag: Boolean = false
 
-    private val invocationIndex: Int
-        get() = invocation % ADJUSTMENT_THRESHOLD
-
-    private val averageInvocationTimeNano: Double
-        get() = invocationsRunningTimeNano.average()
-
-    private var lastInvocationStartTimeNano = -1L
-
-    override fun shouldDoNextIteration(): Boolean =
-        (remainingTimeNano > 0) && (iteration < iterationsBound)
-
-    override fun shouldDoNextInvocation(): Boolean =
-        (remainingTimeNano > 0) && (invocation < invocationsBound)
-
-    override fun iterationStart() {
-        _iterationsRunningTimeNano.add(0)
-        _iterationsInvocationCount.add(0)
-        // currentIterationTimeBoundNano = remainingTimeNano / remainingIterations
-        // invocationsBound = INITIAL_INVOCATIONS_BOUND
-    }
-
-    override fun iterationEnd() {
-        val iterationRunningTimeNano = iterationsRunningTimeNano[iteration]
-        val invocationsCount = iterationsInvocationCount[iteration]
-        val averageInvocationTimeNano = iterationRunningTimeNano / invocationsCount.toDouble()
-        // invocationsRunningTimeNano.fill(0)
-        iteration += 1
-        invocation = 0
-        adjustBounds(averageInvocationTimeNano)
-    }
-
-    override fun invocationStart() {
-        // TODO: Use system.nanoTime
-        lastInvocationStartTimeNano = System.nanoTime()
-    }
-
-    override fun invocationEnd() {
-        check(lastInvocationStartTimeNano >= 0)
-        val elapsed = System.nanoTime() - lastInvocationStartTimeNano
-        invocation += 1
-        runningTimeNano += elapsed
-        _iterationsInvocationCount[iteration] += 1
-        _iterationsRunningTimeNano[iteration] += elapsed
-        // invocationsRunningTimeNano[invocationIndex] = elapsed
-
-        // if (++invocation % ADJUSTMENT_THRESHOLD == 0) {
-        //     // adjustInvocationBound()
-        //     adjustBounds()
-        //     invocationsRunningTimeNano.fill(0)
-        // }
-
-        // if we run out of time, make sure we abort the current iteration ASAP
-        if (currentIterationRemainingTimeNano <= 0) {
-            if (invocation >= invocationsLowerBound && invocation % INVOCATIONS_FACTOR == 0) {
-                invocationsBound = invocation
-            }
+    override fun shouldDoNextIteration(iteration: Int): Boolean {
+        check(iteration == statisticsTracker.iteration)
+        if (iteration > 0) {
+            adjustBounds(
+                averageInvocationTimeNano = statisticsTracker.averageInvocationTimeNano(iteration - 1)
+            )
+            currentIterationOverdueFlag = false
         }
+        return (remainingTimeNano > 0) && (iteration < iterationsBound)
+    }
+
+    override fun shouldDoNextInvocation(invocation: Int): Boolean {
+        check(invocation == statisticsTracker.invocation)
+        // if we run out of time, make sure we abort the current iteration ASAP
+        if (currentIterationRemainingTimeNano <= 0 && !currentIterationOverdueFlag) {
+            invocationsBound = invocation
+                .ceilUpTo(INVOCATIONS_FACTOR)
+                .coerceAtLeast(invocationsLowerBound)
+            currentIterationOverdueFlag = true
+        }
+        return (remainingTimeNano > 0) && (invocation < invocationsBound)
     }
 
     /*
@@ -366,17 +249,14 @@ internal class AdaptivePlanner(
     private fun adjustBounds(averageInvocationTimeNano: Double) {
         // calculate invocation and iteration bounds
         val totalRemainingInvocations = testingTimeNano / averageInvocationTimeNano
-        invocationsBound = sqrt(totalRemainingInvocations * INVOCATIONS_TO_ITERATIONS_RATIO)
-            .let { roundUpTo(it, INVOCATIONS_FACTOR.toDouble()).toInt() }
+        invocationsBound = sqrt(totalRemainingInvocations * INVOCATIONS_TO_ITERATIONS_RATIO).toInt()
+            .roundUpTo(INVOCATIONS_FACTOR)
             .coerceAtLeast(invocationsLowerBound)
             .coerceAtMost(invocationsUpperBound)
         // calculate remaining iterations bound
         iterationsBound = (invocationsBound.toDouble() / INVOCATIONS_TO_ITERATIONS_RATIO)
             .let { floor(it).toInt() }
-            .coerceAtLeast(iteration)
-
-        // println("iterationsBound=$iterationsBound, invocationsBound=$invocationsBound")
-        // println("averageInvocationsCount=${String.format("%.3f", iterationsInvocationCount.average())}")
+            .coerceAtLeast(statisticsTracker.iteration)
 
         // if there are no remaining iterations we are done
         if (remainingIterations <= 0)
@@ -400,58 +280,12 @@ internal class AdaptivePlanner(
             .coerceAtMost(remainingTimeNano)
     }
 
-    // private fun estimateRemainingTimeNano(iterationsBound: Int, iterationTimeEstimate: Long) =
-    //     (iterationsBound - iteration) * iterationTimeEstimate
-    //
-    // private fun adjustIterationsBound(iterationTimeEstimateNano: Long) {
-    //     val estimate = estimateRemainingTimeNano(iterationsBound, iterationTimeEstimateNano)
-    //     val diff = abs(estimate - remainingTimeNano)
-    //     // if we over-perform, try to increase iterations bound
-    //     if (estimate < remainingTimeNano) {
-    //         val newIterationsBound = iterationsBound + ITERATIONS_DELTA
-    //         // if with the larger bound we still over-perform, then increase the bound
-    //         if (estimateRemainingTimeNano(newIterationsBound, iterationTimeEstimateNano) < remainingTimeNano) {
-    //             iterationsBound = newIterationsBound
-    //         }
-    //     }
-    //     // if we under-perform, then decrease iterations bound
-    //     if (estimate > remainingTimeNano) {
-    //         val delay = (estimate - remainingTimeNano).toDouble()
-    //         val delayingIterations = floor(delay / iterationTimeEstimateNano).toInt()
-    //         // remove the iterations we are unlikely to have time to do
-    //         iterationsBound -= delayingIterations
-    //     }
-    // }
-    //
-    // private fun estimateRemainingIterationTimeNano(invocationsBound: Int) =
-    //     (invocationsBound - invocation) * averageInvocationTimeNano
-    //
-    // private fun adjustInvocationBound() {
-    //     val estimate = estimateRemainingIterationTimeNano(invocationsBound)
-    //     // if we over-perform, try to increase invocations bound
-    //     if (estimate < currentIterationRemainingTimeNano && invocationsBound < invocationsUpperBound) {
-    //         val newInvocationsBound = min(invocationsBound * INVOCATIONS_FACTOR, invocationsUpperBound)
-    //         // if with the larger bound we still over-perform, then increase
-    //         if (estimateRemainingIterationTimeNano(newInvocationsBound) < currentIterationRemainingTimeNano) {
-    //             invocationsBound = newInvocationsBound
-    //         }
-    //     }
-    //     // if we under-perform, then decrease invocations bound
-    //     if (estimate > currentIterationRemainingTimeNano && invocationsBound > invocationsLowerBound) {
-    //         invocationsBound = max(invocationsBound / INVOCATIONS_FACTOR, invocationsLowerBound)
-    //     }
-    // }
-
     companion object {
         // initial iterations upper bound
         private const val INITIAL_ITERATIONS_BOUND = 30
 
         // number of iterations added/subtracted when we over- or under-perform the plan
         private const val ITERATIONS_DELTA = 2
-
-        // factor of invocations multiplied/divided by when we over- or under-perform the plan
-        // by an order of magnitude
-        // private const val INVOCATIONS_FACTOR = 2
 
         // initial number of invocations
         private const val INITIAL_INVOCATIONS_BOUND = 5_000
@@ -460,12 +294,13 @@ internal class AdaptivePlanner(
         // that is we ensure number of invocations is always rounded up to this constant
         private const val INVOCATIONS_FACTOR = 100
 
-        // number of invocations performed between dynamic parameter adjustments
-        private const val ADJUSTMENT_THRESHOLD = 100
-
         private const val INVOCATIONS_TO_ITERATIONS_RATIO = 100
     }
 
 }
 
-private fun roundUpTo(x: Double, c: Double) = round(x / c) * c
+private fun Double.roundUpTo(c: Double) = round(this / c) * c
+private fun Int.roundUpTo(c: Int) = toDouble().roundUpTo(c.toDouble()).toInt()
+
+private fun Double.ceilUpTo(c: Double) = ceil(this / c) * c
+private fun Int.ceilUpTo(c: Int) = toDouble().ceilUpTo(c.toDouble()).toInt()

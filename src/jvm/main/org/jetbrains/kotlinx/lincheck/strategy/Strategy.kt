@@ -45,9 +45,10 @@ abstract class Strategy protected constructor(
         throw UnsupportedOperationException("$javaClass strategy does not transform classes")
     }
 
-    fun run(verifier: Verifier, invocationsPlanner: InvocationsPlanner): LincheckFailure? {
-        while (invocationsPlanner.shouldDoNextInvocation()) {
-            invocationsPlanner.trackInvocation {
+    fun run(verifier: Verifier, planner: InvocationsPlanner, statistics: StatisticsTracker? = null): LincheckFailure? {
+        var invocation = 0
+        while (planner.shouldDoNextInvocation(invocation++)) {
+            statistics.trackInvocation {
                 when (val result = runInvocation()) {
                     AllInterleavingsStudiedInvocationResult -> return null
                     is CompletedInvocationResult -> {

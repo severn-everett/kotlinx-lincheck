@@ -172,12 +172,14 @@ internal class LincheckOptionsImpl : LincheckOptions {
     private fun checkCustomScenarios(testClass: Class<*>, testStructure: CTestStructure): LincheckFailure? {
         if (shouldRunStressStrategy) {
             checkInMode(LincheckMode.Stress, testClass, testStructure,
-                CustomScenariosPlanner(customScenariosOptions)
+                CustomScenariosPlanner(customScenariosOptions),
+                StatisticsTracker()
             )?.let { return it }
         }
         if (shouldRunModelCheckingStrategy) {
             checkInMode(LincheckMode.ModelChecking, testClass, testStructure,
-                CustomScenariosPlanner(customScenariosOptions)
+                CustomScenariosPlanner(customScenariosOptions),
+                StatisticsTracker()
             )?.let { return it }
         }
         return null
@@ -185,22 +187,32 @@ internal class LincheckOptionsImpl : LincheckOptions {
 
     private fun checkRandomScenarios(testClass: Class<*>, testStructure: CTestStructure): LincheckFailure? {
         if (shouldRunStressStrategy) {
+            val statisticsTracker = StatisticsTracker()
             checkInMode(LincheckMode.Stress, testClass, testStructure,
-                createRandomScenariosPlanner(LincheckMode.Stress, testStructure)
+                createRandomScenariosPlanner(LincheckMode.Stress, testStructure, statisticsTracker),
+                statisticsTracker
             )?.let { return it }
         }
         if (shouldRunModelCheckingStrategy) {
+            val statisticsTracker = StatisticsTracker()
             checkInMode(LincheckMode.ModelChecking, testClass, testStructure,
-                createRandomScenariosPlanner(LincheckMode.ModelChecking, testStructure)
+                createRandomScenariosPlanner(LincheckMode.ModelChecking, testStructure, statisticsTracker),
+                statisticsTracker
             )?.let { return it }
         }
         return null
     }
 
-    private fun checkInMode(mode: LincheckMode, testClass: Class<*>, testStructure: CTestStructure, planner: Planner): LincheckFailure? {
+    private fun checkInMode(
+        mode: LincheckMode,
+        testClass: Class<*>,
+        testStructure: CTestStructure,
+        planner: Planner,
+        statisticsTracker: StatisticsTracker? = null
+    ): LincheckFailure? {
         val reporter = Reporter(DEFAULT_LOG_LEVEL)
         var verifier = createVerifier(testClass)
-        var failure = planner.runIterations { i, scenario, invocationsPlanner ->
+        var failure = planner.runIterations(statisticsTracker) { i, scenario, invocationsPlanner ->
             // For performance reasons, verifier re-uses LTS from previous iterations.
             // This behaviour is similar to a memory leak and can potentially cause OutOfMemoryError.
             // This is why we periodically create a new verifier to still have increased performance
@@ -211,8 +223,8 @@ internal class LincheckOptionsImpl : LincheckOptions {
             }
             scenario.validate()
             reporter.logIteration(i + 1, scenario)
-            scenario.run(mode, testClass, testStructure, verifier, invocationsPlanner).also {
-                reporter.logIterationStatistics(i, planner.iterationsPlanner as? AdaptivePlanner ?: return@also)
+            scenario.run(mode, testClass, testStructure, verifier, invocationsPlanner, statisticsTracker).also {
+                reporter.logIterationStatistics(statisticsTracker)
             }
         } ?: return null
         if (planner.minimizeFailedScenario) {
@@ -244,33 +256,36 @@ internal class LincheckOptionsImpl : LincheckOptions {
         testStructure: CTestStructure,
         verifier: Verifier,
         planner: InvocationsPlanner,
+        statisticsTracker: StatisticsTracker? = null,
     ): LincheckFailure? =
         createStrategy(currentMode, testClass, this, testStructure).use {
-            it.run(verifier, planner)
+            it.run(verifier, planner, statisticsTracker)
         }
 
-    private fun Reporter.logIterationStatistics(iteration: Int, planner: AdaptivePlanner) {
+    private fun Reporter.logIterationStatistics(statisticsTracker: StatisticsTracker?) {
+        statisticsTracker ?: return
         logIterationStatistics(
-            planner.iterationsInvocationCount[iteration],
-            planner.iterationsRunningTimeNano[iteration]
+            statisticsTracker.currentIterationInvocationsCount,
+            statisticsTracker.currentIterationRunningTimeNano,
         )
     }
 
-    private fun createRandomScenariosPlanner(mode: LincheckMode, testStructure: CTestStructure): Planner =
+    private fun createRandomScenariosPlanner(mode: LincheckMode, testStructure: CTestStructure, statisticsTracker: StatisticsTracker): Planner =
         RandomScenariosAdaptivePlanner(
             mode = mode,
-            testingTimeMs = when (mode) {
-                LincheckMode.Stress -> stressTestingTimeMs
-                LincheckMode.ModelChecking -> modelCheckingTimeMs
-                else -> throw IllegalArgumentException()
-            },
             minThreads = DEFAULT_MIN_THREADS,
             maxThreads = maxThreads,
             minOperations = DEFAULT_MIN_OPERATIONS,
             maxOperations = maxOperationsInThread,
             generateBeforeAndAfterParts = generateBeforeAndAfterParts,
+            minimizeFailedScenario = minimizeFailedScenario,
             scenarioGenerator = RandomExecutionGenerator(testStructure, testStructure.randomProvider),
-            minimizeFailedScenario = minimizeFailedScenario
+            statisticsTracker = statisticsTracker,
+            testingTimeMs = when (mode) {
+                LincheckMode.Stress -> stressTestingTimeMs
+                LincheckMode.ModelChecking -> modelCheckingTimeMs
+                else -> throw IllegalArgumentException()
+            },
         )
 
     private fun createVerifier(testClass: Class<*>) = verifier
