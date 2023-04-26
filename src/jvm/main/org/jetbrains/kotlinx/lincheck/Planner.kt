@@ -180,14 +180,14 @@ internal class AdaptivePlanner(
     /**
      * Lower bound of invocations allocated by iteration
      */
-    private val invocationsLowerBound = 1_000
+    private val invocationsLowerBound = INVOCATIONS_LOWER_BOUND
 
     /**
      * upper bound of invocations allocated by iteration
      */
     private val invocationsUpperBound = when (mode) {
-        LincheckMode.Stress         -> 1_000_000
-        LincheckMode.ModelChecking  -> 20_000
+        LincheckMode.Stress         -> STRESS_INVOCATIONS_UPPER_BOUND
+        LincheckMode.ModelChecking  -> MODEL_CHECKING_INVOCATIONS_UPPER_BOUND
         else -> throw IllegalArgumentException()
     }
 
@@ -258,9 +258,7 @@ internal class AdaptivePlanner(
             .let { floor(it).toInt() }
             .coerceAtLeast(statisticsTracker.iteration)
 
-        // if there are no remaining iterations we are done
-        if (remainingIterations <= 0)
-            return
+        // println("iterationsBound=$iterationsBound, invocationsBound=$invocationsBound")
 
         // adjust the remaining iterations bounds to fit into deadline
         val iterationTimeEstimateNano = invocationsBound * averageInvocationTimeNano
@@ -274,6 +272,10 @@ internal class AdaptivePlanner(
                 iterationsBound += iterationsDiff
         }
 
+        // if there are no remaining iterations we are done
+        if (remainingIterations <= 0)
+            return
+
         // set deadline for the next iteration
         currentIterationTimeBoundNano = (remainingTimeNano / remainingIterations.toDouble())
             .let { floor(it).toLong() }
@@ -285,7 +287,7 @@ internal class AdaptivePlanner(
         private const val INITIAL_ITERATIONS_BOUND = 30
 
         // number of iterations added/subtracted when we over- or under-perform the plan
-        private const val ITERATIONS_DELTA = 2
+        private const val ITERATIONS_DELTA = 1
 
         // initial number of invocations
         private const val INITIAL_INVOCATIONS_BOUND = 5_000
@@ -294,7 +296,11 @@ internal class AdaptivePlanner(
         // that is we ensure number of invocations is always rounded up to this constant
         private const val INVOCATIONS_FACTOR = 100
 
-        private const val INVOCATIONS_TO_ITERATIONS_RATIO = 100
+        internal const val INVOCATIONS_TO_ITERATIONS_RATIO = 100
+
+        internal const val INVOCATIONS_LOWER_BOUND = 1_000
+        internal const val STRESS_INVOCATIONS_UPPER_BOUND = 1_000_000
+        internal const val MODEL_CHECKING_INVOCATIONS_UPPER_BOUND = 20_000
     }
 
 }

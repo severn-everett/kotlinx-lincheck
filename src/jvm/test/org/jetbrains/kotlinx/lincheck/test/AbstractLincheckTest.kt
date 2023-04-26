@@ -25,6 +25,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.*
+import kotlin.math.*
 import kotlin.reflect.*
 
 abstract class AbstractLincheckTest(
@@ -53,8 +54,9 @@ abstract class AbstractLincheckTest(
     }.runTest()
 
     private fun LincheckOptions.runTest() {
-        val failure: LincheckFailure? = checkImpl(this@AbstractLincheckTest::class.java)
-        if (failure === null) {
+        val result = runTests(this@AbstractLincheckTest::class.java)
+        val failure = result.failure
+        if (failure == null) {
             assert(expectedFailures.isEmpty()) {
                 "This test should fail, but no error has been occurred (see the logs for details)"
             }
@@ -63,6 +65,44 @@ abstract class AbstractLincheckTest(
             assert(expectedFailures.contains(failure::class)) {
                 "This test has failed with an unexpected error: \n $failure"
             }
+        }
+        checkAdaptivePlanningConstraints(result)
+    }
+
+    private fun LincheckOptions.checkAdaptivePlanningConstraints(result: LincheckTestingResult) {
+        // the failure can be detected earlier, thus it is fine if the planning constraints are violated
+        if (result.failure != null)
+            return
+        val statistics = result.statistics
+        val testingTimeNano = testingTimeInSeconds * 1_000_000_000
+        // error up to 0.25 sec
+        val deltaNano = 1_000_000_000 / 4
+        // check that the actual running time is close to specified time
+        assert(abs(testingTimeNano - statistics.runningTimeNano) < deltaNano) { """
+            Testing time is beyond expected bounds:
+            actual: ${String.format("%.3f", statistics.runningTimeNano.toDouble() / 1_000_000_000)}.
+            expected: ${String.format("%.3f", testingTimeNano.toDouble() / 1_000_000_000)}
+        """.trimIndent()
+        }
+        // check that the invocations / iterations ratio between is constant;
+        // however, if most iterations have invocations number close to the bounds,
+        // then we do not check ratio constraint, because it is likely to be violated
+        val invocationsBounds = listOf(
+            AdaptivePlanner.INVOCATIONS_LOWER_BOUND,
+            AdaptivePlanner.STRESS_INVOCATIONS_UPPER_BOUND,
+            AdaptivePlanner.MODEL_CHECKING_INVOCATIONS_UPPER_BOUND,
+        )
+        val boundsReachingIterations = statistics.iterationsInvocationsCount
+            .count { it in invocationsBounds }
+        if (boundsReachingIterations > 0.6 * statistics.iterations)
+            return
+        val invocationsRatio = statistics.averageInvocations / statistics.iterations
+        val expectedRatio = AdaptivePlanner.INVOCATIONS_TO_ITERATIONS_RATIO.toDouble()
+        assert(abs(invocationsRatio - expectedRatio) < expectedRatio * 0.05) { """
+            Invocations to iterations ratio differs from expected:
+            actual: ${String.format("%.3f", invocationsRatio)}
+            expected: $expectedRatio
+        """.trimIndent()
         }
     }
 

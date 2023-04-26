@@ -76,7 +76,7 @@ interface LincheckOptions {
      *
      * @return [LincheckFailure] if some bug has been found.
      */
-    fun checkImpl(testClass: Class<*>): LincheckFailure?
+    fun runTests(testClass: Class<*>): LincheckTestingResult
 }
 
 /**
@@ -89,6 +89,14 @@ fun LincheckOptions(configurationBlock: LincheckOptions.() -> Unit): LincheckOpt
     options.configurationBlock()
     return options
 }
+
+/**
+ * Runs the Lincheck test on the specified class.
+ *
+ * @return [LincheckFailure] if some bug has been found.
+ */
+fun LincheckOptions.checkImpl(testClass: Class<*>): LincheckFailure? =
+    runTests(testClass).failure
 
 /**
  * Runs the Lincheck test on the specified class.
@@ -160,47 +168,64 @@ internal class LincheckOptionsImpl : LincheckOptions {
         )
     }
 
-    override fun checkImpl(testClass: Class<*>): LincheckFailure? {
+    override fun runTests(testClass: Class<*>): LincheckTestingResult {
+        var failure: LincheckFailure? = null
+        var summaryStatistics = Statistics.empty
         val testStructure = CTestStructure.getFromTestClass(testClass)
-        if (customScenariosOptions.size > 0)
-            checkCustomScenarios(testClass, testStructure)?.let { return it }
-        if (generateRandomScenarios)
-            checkRandomScenarios(testClass, testStructure)?.let { return it }
-        return null
+        if (customScenariosOptions.size > 0 && failure == null) {
+            val result = checkCustomScenarios(testClass, testStructure)
+            failure = result.failure
+            // TODO: we currently do not incorporate custom scenarios statistics,
+            //   because in tests we check that random testing statistics meets
+            //   the constraints specified in LincheckOptions.
+            //   In the future we might implement a solution that would allow to
+            //   store statistics for different testing configurations separately
+            // summaryStatistics += result.statistics
+        }
+        if (generateRandomScenarios && failure == null) {
+            val result = checkRandomScenarios(testClass, testStructure)
+            failure = result.failure
+            summaryStatistics += result.statistics
+        }
+        return LincheckTestingResult(failure, summaryStatistics)
     }
 
-    private fun checkCustomScenarios(testClass: Class<*>, testStructure: CTestStructure): LincheckFailure? {
-        if (shouldRunStressStrategy) {
+    private fun checkCustomScenarios(testClass: Class<*>, testStructure: CTestStructure): LincheckTestingResult {
+        var failure: LincheckFailure? = null
+        val stressStatistics = StatisticsTracker()
+        val modeCheckingStatistics = StatisticsTracker()
+        if (shouldRunStressStrategy && failure == null) {
             checkInMode(LincheckMode.Stress, testClass, testStructure,
                 CustomScenariosPlanner(customScenariosOptions),
-                StatisticsTracker()
-            )?.let { return it }
+                stressStatistics
+            )?.let { failure = it }
+        }
+        if (shouldRunModelCheckingStrategy && failure == null) {
+            checkInMode(LincheckMode.ModelChecking, testClass, testStructure,
+                CustomScenariosPlanner(customScenariosOptions),
+                modeCheckingStatistics
+            )?.let { failure = it }
+        }
+        return LincheckTestingResult(failure, stressStatistics + modeCheckingStatistics)
+    }
+
+    private fun checkRandomScenarios(testClass: Class<*>, testStructure: CTestStructure): LincheckTestingResult {
+        var failure: LincheckFailure? = null
+        val stressStatistics = StatisticsTracker()
+        val modeCheckingStatistics = StatisticsTracker()
+        if (shouldRunStressStrategy) {
+            checkInMode(LincheckMode.Stress, testClass, testStructure,
+                createRandomScenariosPlanner(LincheckMode.Stress, testStructure, stressStatistics),
+                stressStatistics
+            )?.let { failure = it }
         }
         if (shouldRunModelCheckingStrategy) {
             checkInMode(LincheckMode.ModelChecking, testClass, testStructure,
-                CustomScenariosPlanner(customScenariosOptions),
-                StatisticsTracker()
-            )?.let { return it }
+                createRandomScenariosPlanner(LincheckMode.ModelChecking, testStructure, modeCheckingStatistics),
+                modeCheckingStatistics
+            )?.let { failure = it }
         }
-        return null
-    }
-
-    private fun checkRandomScenarios(testClass: Class<*>, testStructure: CTestStructure): LincheckFailure? {
-        if (shouldRunStressStrategy) {
-            val statisticsTracker = StatisticsTracker()
-            checkInMode(LincheckMode.Stress, testClass, testStructure,
-                createRandomScenariosPlanner(LincheckMode.Stress, testStructure, statisticsTracker),
-                statisticsTracker
-            )?.let { return it }
-        }
-        if (shouldRunModelCheckingStrategy) {
-            val statisticsTracker = StatisticsTracker()
-            checkInMode(LincheckMode.ModelChecking, testClass, testStructure,
-                createRandomScenariosPlanner(LincheckMode.ModelChecking, testStructure, statisticsTracker),
-                statisticsTracker
-            )?.let { return it }
-        }
-        return null
+        return LincheckTestingResult(failure, stressStatistics + modeCheckingStatistics)
     }
 
     private fun checkInMode(

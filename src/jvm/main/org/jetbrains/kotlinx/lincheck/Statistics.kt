@@ -37,6 +37,37 @@ interface Statistics {
      */
     val iterationsInvocationsCount: List<Int>
 
+    companion object {
+        val empty = object : Statistics {
+            override val runningTimeNano: Long = 0
+            override val iterationsRunningTimeNano: List<Long> = listOf()
+            override val iterationsInvocationsCount: List<Int> = listOf()
+        }
+    }
+
+}
+
+/**
+ * Number of performed iterations, that is run scenarios.
+ */
+val Statistics.iterations: Int
+    get() = iterationsRunningTimeNano.size
+
+/**
+ * Average number of invocations performed by iteration.
+ */
+val Statistics.averageInvocations: Double
+    get() = iterationsInvocationsCount.average()
+
+operator fun Statistics.plus(statistics: Statistics) = object : Statistics {
+    override val runningTimeNano: Long =
+        this@plus.runningTimeNano + statistics.runningTimeNano
+
+    override val iterationsRunningTimeNano: List<Long> =
+        this@plus.iterationsRunningTimeNano + statistics.iterationsRunningTimeNano
+
+    override val iterationsInvocationsCount: List<Int> =
+        this@plus.iterationsInvocationsCount + statistics.iterationsInvocationsCount
 }
 
 /**
@@ -52,11 +83,11 @@ class StatisticsTracker : Statistics {
 
     override val iterationsRunningTimeNano: List<Long>
         get() = _iterationsRunningTimeNano
-    private val _iterationsRunningTimeNano = mutableListOf<Long>(0)
+    private val _iterationsRunningTimeNano = mutableListOf(0L)
 
     override val iterationsInvocationsCount: List<Int>
         get() = _iterationsInvocationCount
-    private val _iterationsInvocationCount = mutableListOf<Int>(0)
+    private val _iterationsInvocationCount = mutableListOf(0)
 
     /**
      * Current iteration number.
