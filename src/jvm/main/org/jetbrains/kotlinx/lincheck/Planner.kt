@@ -191,35 +191,18 @@ internal class AdaptivePlanner(
         else -> throw IllegalArgumentException()
     }
 
-    // time limit allocated to current iteration
-    private var currentIterationTimeBoundNano = testingTimeNano / iterationsBound
-
-    // remaining time for current iteration
-    private val currentIterationRemainingTimeNano: Long
-        get() = (currentIterationTimeBoundNano - statisticsTracker.currentIterationRunningTimeNano).coerceAtMost(0)
-
-    private var currentIterationOverdueFlag: Boolean = false
-
     override fun shouldDoNextIteration(iteration: Int): Boolean {
         check(iteration == statisticsTracker.iteration)
         if (iteration > 0) {
             adjustBounds(
                 averageInvocationTimeNano = statisticsTracker.averageInvocationTimeNano(iteration - 1)
             )
-            currentIterationOverdueFlag = false
         }
         return (remainingTimeNano > 0) && (iteration < iterationsBound)
     }
 
     override fun shouldDoNextInvocation(invocation: Int): Boolean {
         check(invocation == statisticsTracker.invocation)
-        // if we run out of time, make sure we abort the current iteration ASAP
-        if (currentIterationRemainingTimeNano <= 0 && !currentIterationOverdueFlag) {
-            invocationsBound = invocation
-                .ceilUpTo(INVOCATIONS_FACTOR)
-                .coerceAtLeast(invocationsLowerBound)
-            currentIterationOverdueFlag = true
-        }
         return (remainingTimeNano > 0) && (invocation < invocationsBound)
     }
 
@@ -258,8 +241,6 @@ internal class AdaptivePlanner(
             .let { floor(it).toInt() }
             .coerceAtLeast(statisticsTracker.iteration)
 
-        // println("iterationsBound=$iterationsBound, invocationsBound=$invocationsBound")
-
         // adjust the remaining iterations bounds to fit into deadline
         val iterationTimeEstimateNano = invocationsBound * averageInvocationTimeNano
         val remainingTimeEstimateNano = remainingIterations * iterationTimeEstimateNano
@@ -272,14 +253,7 @@ internal class AdaptivePlanner(
                 iterationsBound += iterationsDiff
         }
 
-        // if there are no remaining iterations we are done
-        if (remainingIterations <= 0)
-            return
-
-        // set deadline for the next iteration
-        currentIterationTimeBoundNano = (remainingTimeNano / remainingIterations.toDouble())
-            .let { floor(it).toLong() }
-            .coerceAtMost(remainingTimeNano)
+        println("iterationsBound=$iterationsBound, invocationsBound=$invocationsBound")
     }
 
     companion object {
