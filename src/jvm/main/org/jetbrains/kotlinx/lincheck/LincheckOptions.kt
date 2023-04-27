@@ -213,13 +213,13 @@ internal class LincheckOptionsImpl : LincheckOptions {
         var failure: LincheckFailure? = null
         val stressStatistics = StatisticsTracker()
         val modeCheckingStatistics = StatisticsTracker()
-        if (shouldRunStressStrategy) {
+        if (shouldRunStressStrategy && failure == null) {
             checkInMode(LincheckMode.Stress, testClass, testStructure,
                 createRandomScenariosPlanner(LincheckMode.Stress, testStructure, stressStatistics),
                 stressStatistics
             )?.let { failure = it }
         }
-        if (shouldRunModelCheckingStrategy) {
+        if (shouldRunModelCheckingStrategy && failure == null) {
             checkInMode(LincheckMode.ModelChecking, testClass, testStructure,
                 createRandomScenariosPlanner(LincheckMode.ModelChecking, testStructure, modeCheckingStatistics),
                 modeCheckingStatistics

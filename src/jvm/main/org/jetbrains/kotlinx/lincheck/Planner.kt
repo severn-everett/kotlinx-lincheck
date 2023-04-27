@@ -264,7 +264,7 @@ internal class AdaptivePlanner(
         private const val ITERATIONS_DELTA = 1
 
         // initial number of invocations
-        private const val INITIAL_INVOCATIONS_BOUND = 5_000
+        private const val INITIAL_INVOCATIONS_BOUND = 1_000
 
         // number of invocations should be divisible to this constant,
         // that is we ensure number of invocations is always rounded up to this constant
