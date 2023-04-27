@@ -342,7 +342,7 @@ abstract class ManagedStrategy(
 //                    }
 //                }
 //            }
-            Thread.yield()
+//            Thread.yield()
             curThread = currentThread
         }
     }
@@ -940,6 +940,7 @@ private class ManagedStrategyRunner(
     }
 
     override fun constructStateRepresentation(): String? {
+        if (stateRepresentationFunction == null) return null
         // Enter ignored section, because Runner will call transformed state representation method
         val t = Thread.currentThread() as? TestThread
         t?.let { it.ignoredSectionDepth++ }

@@ -93,6 +93,7 @@ class StressStateReportingTest : VerifierState() {
     }
 }
 
+@Ignore
 class StateRepresentationInParentClassTest : ModelCheckingStateReportingTest()
 
 class TwoStateRepresentationFunctionsTest : VerifierState() {

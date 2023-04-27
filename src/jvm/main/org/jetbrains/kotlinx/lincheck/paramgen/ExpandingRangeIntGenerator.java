@@ -81,7 +81,7 @@ public class ExpandingRangeIntGenerator {
     public int nextInt() {
         checkRangeExpansionAbility();
 
-        if (nextExpansionDirection == NextExpansionDirection.DISABLED || !random.nextBoolean()) {
+        if (nextExpansionDirection == NextExpansionDirection.DISABLED || random.nextInt(100) > 30) {
             return generateFromRandomRange(begin, end);
         }
 
@@ -160,6 +160,4 @@ public class ExpandingRangeIntGenerator {
 
         return new ExpandingRangeIntGenerator(random, startValue, startValue, begin, end);
     }
-
-
 }

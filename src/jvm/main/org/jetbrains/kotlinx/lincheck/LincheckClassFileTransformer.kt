@@ -120,20 +120,27 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         classBeingRedefined: Class<*>?,
         protectionDomain: ProtectionDomain?,
         classfileBuffer: ByteArray
-    ): ByteArray = synchronized(LincheckClassFileTransformer) {
-        if (!shouldTransform(className.canonicalClassName)) return classfileBuffer
-        return transformedClasses.computeIfAbsent(classKey(loader, className)) {
-            oldClasses[classKey(loader, className)] = classfileBuffer
-            val reader = ClassReader(classfileBuffer)
-            val writer = ClassWriter(reader, ClassWriter.COMPUTE_FRAMES)
-            try {
-                reader.accept(LincheckClassVisitor(writer), ClassReader.SKIP_FRAMES)
-                writer.toByteArray()
-            } catch (e: Exception) {
-                System.err.println("Unable to transform $className")
-                e.printStackTrace()
-                classfileBuffer
+    ): ByteArray {
+        Injections.enterIgnoredSection()
+        try {
+            synchronized(LincheckClassFileTransformer) {
+                if (!shouldTransform(className.canonicalClassName)) return classfileBuffer
+                return transformedClasses.computeIfAbsent(classKey(loader, className)) {
+                    oldClasses[classKey(loader, className)] = classfileBuffer
+                    val reader = ClassReader(classfileBuffer)
+                    val writer = ClassWriter(reader, ClassWriter.COMPUTE_FRAMES)
+                    try {
+                        reader.accept(LincheckClassVisitor(writer), ClassReader.EXPAND_FRAMES)
+                        writer.toByteArray()
+                    } catch (e: Exception) {
+                        System.err.println("Unable to transform $className")
+                        e.printStackTrace()
+                        classfileBuffer
+                    }
+                }
             }
+        } finally {
+            Injections.leaveIgnoredSection()
         }
     }
 
@@ -336,29 +343,34 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
                 code = {
                     loadSynchronizedMethodMonitorOwner()
                     monitorExit()
+                }
+            )
+            visitLabel(tryLabel)
+            invokeIfInTestingCode(
+                original = {},
+                code = {
                     loadSynchronizedMethodMonitorOwner()
                     loadNewCodeLocationId()
                     invokeStatic(Injections::lock)
-                    visitLabel(tryLabel)
                 }
             )
             visitCode()
         }
 
         override fun visitMaxs(maxStack: Int, maxLocals: Int) = adapter.run {
+            visitLabel(catchLabel)
             invokeIfInTestingCode(
                 original = {},
                 code = {
-                    visitLabel(catchLabel)
                     loadSynchronizedMethodMonitorOwner()
                     loadNewCodeLocationId()
                     invokeStatic(Injections::unlock)
                     loadSynchronizedMethodMonitorOwner()
                     monitorEnter()
-                    throwException()
-                    visitTryCatchBlock(tryLabel, catchLabel, catchLabel, null)
                 }
             )
+            throwException()
+            visitTryCatchBlock(tryLabel, catchLabel, catchLabel, null)
             visitMaxs(maxStack, maxLocals)
         }
 
@@ -387,7 +399,9 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
                     visitLdcInsn(classType)
                 } else {
                     visitLdcInsn(classType.className)
+                    invokeStatic(Injections::enterIgnoredSection)
                     invokeStatic(CLASS_TYPE, CLASS_FOR_NAME_METHOD)
+                    invokeStatic(Injections::leaveIgnoredSection)
                 }
             } else {
                 loadThis()

@@ -20,14 +20,11 @@
 
 package org.jetbrains.kotlinx.lincheck.test.generator
 
-import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
-import org.jetbrains.kotlinx.lincheck.LoggingLevel
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.annotations.Param
-import org.jetbrains.kotlinx.lincheck.check
-import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.junit.Test
+import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.annotations.*
+import org.jetbrains.kotlinx.lincheck.paramgen.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.junit.*
 
 /**
  * This test checks that parameter generators random use different seeds than executions generator.
@@ -47,7 +44,7 @@ class GeneratorSeedTest {
     }
 
     @Test(expected = LincheckAssertionError::class)
-    fun test() = ModelCheckingOptions().logLevel(LoggingLevel.INFO).check(this::class)
+    fun test() = ModelCheckingOptions().check(this::class)
 
 }
 
@@ -61,7 +58,7 @@ class MethodParameterGenerationTestWithBothParametersAnnotated {
         checkParameters(first, second)
 
     @Test(expected = IllegalStateException::class)
-    fun test() = ModelCheckingOptions().logLevel(LoggingLevel.INFO).check(this::class)
+    fun test() = ModelCheckingOptions().check(this::class)
 
 }
 
@@ -76,7 +73,7 @@ class MethodParameterGenerationTestWithFirstParameterAnnotated {
     fun operation(@Param(name = "key") first: Int, second: Int) = checkParameters(first, second)
 
     @Test(expected = IllegalStateException::class)
-    fun test() = ModelCheckingOptions().logLevel(LoggingLevel.INFO).check(this::class)
+    fun test() = ModelCheckingOptions().check(this::class)
 
 }
 
@@ -90,7 +87,7 @@ class MethodParameterGenerationTestWithSecondParameterAnnotated {
     fun operation(first: Int, @Param(name = "key") second: Int) = checkParameters(first, second)
 
     @Test(expected = IllegalStateException::class)
-    fun test() = ModelCheckingOptions().logLevel(LoggingLevel.INFO).check(this::class)
+    fun test() = ModelCheckingOptions().check(this::class)
 
 }
 
@@ -102,7 +99,7 @@ class MethodParameterGenerationTest {
     fun operation(first: Int, second: Int) = checkParameters(first, second)
 
     @Test(expected = IllegalStateException::class)
-    fun test() = ModelCheckingOptions().logLevel(LoggingLevel.INFO).check(this::class)
+    fun test() = ModelCheckingOptions().check(this::class)
 
 }
 

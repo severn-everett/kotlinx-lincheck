@@ -39,7 +39,6 @@ class ConcurrentHashMapTest {
         .check(this::class)
 }
 
-@Ignore
 class ConcurrentSkipListMapTest {
     private val map = ConcurrentSkipListMap<Int, Int>()
 

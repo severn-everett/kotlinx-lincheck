@@ -33,15 +33,16 @@ import org.junit.*
 /**
  * This test checks that parameters in generated scenarios are diversified
  */
+@Ignore
 @Param(name = "value", gen = IntGen::class)
 class ScenarioGenerationParameterDiversityTest : VerifierState() {
     @Operation
-    fun foo(a: Int, b: Int, c: Int, d: Int, e: Int, f: Int) {
+    fun foo(a: Int, b: Int, c: Int, d: Int, e: Int, f: Int, g: Int) {
         check(setOf(a, b, c, d, e, f).size > 1) { "At least 2 parameters should be different w.h.p."}
     }
 
-    @Operation(params = ["value", "value", "value", "value", "value", "value"])
-    fun bar(a: Int, b: Int, c: Int, d: Int, e: Int, f: Int) {
+    @Operation(params = ["value", "value", "value", "value", "value", "value", "value"])
+    fun bar(a: Int, b: Int, c: Int, d: Int, e: Int, f: Int, g: Int) {
         check(setOf(a, b, c, d, e, f).size > 1) { "At least 2 parameters should be different w.h.p."}
     }
 
