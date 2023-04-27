@@ -249,10 +249,10 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
         mv = JSRInlinerAdapter(mv, access, methodName, desc, signature, exceptions)
         mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
         mv = CoroutineCancellabilitySupportMethodTransformer(mv, access, methodName, desc)
-        mv = MonitorEnterAndExitTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
         if (access and ACC_SYNCHRONIZED != 0) {
             mv = SynchronizedMethodTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc), classVersion)
         }
+        mv = MonitorEnterAndExitTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
         mv = AFUTrackingTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
         mv = WaitNotifyTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
         mv = ParkUnparkTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
