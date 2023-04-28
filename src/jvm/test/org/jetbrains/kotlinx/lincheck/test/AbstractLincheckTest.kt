@@ -70,33 +70,48 @@ abstract class AbstractLincheckTest(
     }
 
     private fun LincheckOptions.checkAdaptivePlanningConstraints(result: LincheckTestingResult) {
+        this as LincheckOptionsImpl
         // the failure can be detected earlier, thus it is fine if the planning constraints are violated
         if (result.failure != null)
             return
         val statistics = result.statistics
-        val testingTimeNano = testingTimeInSeconds * 1_000_000_000
+        val customScenariosTimeNano = statistics.iterationsRunningTimeNano
+            .take(customScenariosOptions.size)
+            .sum()
+        val randomTestingTimeNano = testingTimeInSeconds * 1_000_000_000 - customScenariosTimeNano
         // error up to 0.25 sec
-        val deltaNano = 1_000_000_000 / 4
+        val timeDeltaNano = 1_000_000_000 / 4
         // check that the actual running time is close to specified time
-        assert(abs(testingTimeNano - statistics.runningTimeNano) < deltaNano) { """
+        assert(abs(randomTestingTimeNano - statistics.runningTimeNano) < timeDeltaNano) { """
             Testing time is beyond expected bounds:
             actual: ${String.format("%.3f", statistics.runningTimeNano.toDouble() / 1_000_000_000)}.
-            expected: ${String.format("%.3f", testingTimeNano.toDouble() / 1_000_000_000)}
+            expected: ${String.format("%.3f", randomTestingTimeNano.toDouble() / 1_000_000_000)}
         """.trimIndent()
         }
         // check that the invocations / iterations ratio between is constant;
-        // however, if most iterations have invocations number close to the bounds,
-        // then we do not check ratio constraint, because it is likely to be violated
+        // note that because of the many corner-cases in planning, we have to be careful when checking it
         val invocationsBounds = listOf(
             AdaptivePlanner.INVOCATIONS_LOWER_BOUND,
             AdaptivePlanner.STRESS_INVOCATIONS_UPPER_BOUND,
             AdaptivePlanner.MODEL_CHECKING_INVOCATIONS_UPPER_BOUND,
         )
-        val boundsReachingIterations = statistics.iterationsInvocationsCount
-            .count { it in invocationsBounds }
-        if (boundsReachingIterations > 0.6 * statistics.iterations)
+        // so we remove the following iterations:
+        val normallyPlannedIterations = statistics.iterationsInvocationsCount
+            // custom scenario iterations
+            .drop(customScenariosOptions.size)
+            // iterations hitting invocations bounds
+            .filter { it !in invocationsBounds }
+            // iterations aborted either due to timeout, or because model checking studied all interleavings;
+            // we use the following two checks to determine whether iteration was aborted:
+            // (1) any number of invocations smaller than minimal invocations bound signifies about abort;
+            .filter { it >= AdaptivePlanner.INVOCATIONS_LOWER_BOUND }
+            // (2) because the planner allocates only number of invocations which are factor of special constant,
+            //     any number of invocations that is not divisible to this constant can
+            //     be considered to be aborted iteration
+            .filter { it % AdaptivePlanner.INVOCATIONS_FACTOR == 0 }
+        if (normallyPlannedIterations.isEmpty())
             return
-        val invocationsRatio = statistics.averageInvocations / statistics.iterations
+        val invocationsRatio = normallyPlannedIterations.average() / normallyPlannedIterations.size
         val expectedRatio = AdaptivePlanner.INVOCATIONS_TO_ITERATIONS_RATIO.toDouble()
         assert(abs(invocationsRatio - expectedRatio) < expectedRatio * 0.05) { """
             Invocations to iterations ratio differs from expected:

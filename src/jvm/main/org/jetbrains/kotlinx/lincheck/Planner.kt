@@ -231,8 +231,8 @@ internal class AdaptivePlanner(
      */
     private fun adjustBounds(averageInvocationTimeNano: Double) {
         // calculate invocation and iteration bounds
-        val totalRemainingInvocations = testingTimeNano / averageInvocationTimeNano
-        invocationsBound = sqrt(totalRemainingInvocations * INVOCATIONS_TO_ITERATIONS_RATIO).toInt()
+        val totalInvocations = testingTimeNano / averageInvocationTimeNano
+        invocationsBound = sqrt(totalInvocations * INVOCATIONS_TO_ITERATIONS_RATIO).toInt()
             .roundUpTo(INVOCATIONS_FACTOR)
             .coerceAtLeast(invocationsLowerBound)
             .coerceAtMost(invocationsUpperBound)
@@ -247,7 +247,7 @@ internal class AdaptivePlanner(
         val timeDiffNano = abs(remainingTimeEstimateNano - remainingTimeNano)
         val iterationsDiff = ceil(timeDiffNano / iterationTimeEstimateNano).toInt()
         if (iterationsDiff >= ITERATIONS_DELTA) {
-            if (remainingTimeEstimateNano > remainingTimeEstimateNano)
+            if (remainingTimeEstimateNano > remainingTimeNano)
                 iterationsBound -= iterationsDiff
             else
                 iterationsBound += iterationsDiff
@@ -268,7 +268,7 @@ internal class AdaptivePlanner(
 
         // number of invocations should be divisible to this constant,
         // that is we ensure number of invocations is always rounded up to this constant
-        private const val INVOCATIONS_FACTOR = 100
+        internal const val INVOCATIONS_FACTOR = 100
 
         internal const val INVOCATIONS_TO_ITERATIONS_RATIO = 100
 

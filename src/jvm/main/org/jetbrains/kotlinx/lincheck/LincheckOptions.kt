@@ -121,8 +121,6 @@ internal enum class LincheckMode {
 }
 
 internal class LincheckOptionsImpl : LincheckOptions {
-    private val customScenariosOptions = mutableListOf<CustomScenarioOptions>()
-
     override var testingTimeInSeconds = DEFAULT_TESTING_TIME
     override var maxThreads = DEFAULT_MAX_THREADS
     override var maxOperationsInThread = DEFAULT_MAX_OPERATIONS
@@ -135,6 +133,8 @@ internal class LincheckOptionsImpl : LincheckOptions {
     internal var minimizeFailedScenario = true
     internal var generateRandomScenarios = true
     internal var generateBeforeAndAfterParts = true
+
+    internal val customScenariosOptions = mutableListOf<CustomScenarioOptions>()
 
     private val shouldRunStressStrategy: Boolean
         get() = (mode == LincheckMode.Stress) || (mode == LincheckMode.Hybrid)
@@ -175,12 +175,7 @@ internal class LincheckOptionsImpl : LincheckOptions {
         if (customScenariosOptions.size > 0 && failure == null) {
             val result = checkCustomScenarios(testClass, testStructure)
             failure = result.failure
-            // TODO: we currently do not incorporate custom scenarios statistics,
-            //   because in tests we check that random testing statistics meets
-            //   the constraints specified in LincheckOptions.
-            //   In the future we might implement a solution that would allow to
-            //   store statistics for different testing configurations separately
-            // summaryStatistics += result.statistics
+            summaryStatistics += result.statistics
         }
         if (generateRandomScenarios && failure == null) {
             val result = checkRandomScenarios(testClass, testStructure)
