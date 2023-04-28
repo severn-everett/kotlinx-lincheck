@@ -34,7 +34,6 @@ import org.junit.*
  * this test fails by timeout since the number of
  * invocations is set to [Int.MAX_VALUE].
  */
-@Ignore
 @ModelCheckingCTest(actorsBefore = 0, actorsAfter = 0, actorsPerThread = 50, invocationsPerIteration = Int.MAX_VALUE, iterations = 50)
 class LocalObjectEliminationTest : VerifierState() {
     @Operation

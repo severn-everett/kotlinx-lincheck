@@ -34,15 +34,12 @@ import java.util.*
  * associated with the corresponding field names, so that in the trace users see
  * the field names instead of something like `AtomicInteger@100500`.
  */
-internal class ObjectManager(private val testInstance: Any) {
+internal class ObjectManager {
     // For each local object store all objects that depend on it (e.g, are referenced by it).
     // Non-local objects are not presented in this map.
     private val localObjects = IdentityHashMap<Any, MutableList<Any>>()
 
-    fun newLocalObject(o: Any) {
-        // a test instance can not be local object.
-        // check by name to ignore difference in loaders
-        if (o === testInstance) return
+    fun newObject(o: Any) {
         // add o to list of local object with no dependencies
         localObjects[o] = mutableListOf()
     }

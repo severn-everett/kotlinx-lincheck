@@ -267,6 +267,11 @@ internal object Injections {
     }
 
     @JvmStatic
+    fun onNewObjectCreation(obj: Any?) {
+        sharedEventsTracker.onNewObjectCreation(obj)
+    }
+
+    @JvmStatic
     fun onNewAtomicFieldUpdater(updater: Any?, name: String) {
         AtomicFieldNameMapper.newAtomic(updater!!, name)
     }

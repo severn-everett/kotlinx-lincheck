@@ -143,6 +143,7 @@ abstract class ManagedStrategy(
         suspendedFunctionsStack.forEach { it.clear() }
         randoms.forEachIndexed { i, r -> r.setSeed(i + 239L) }
         (runner as ParallelThreadsRunner).executor.threads.forEach { it.sharedEventsTracker = this }
+        objectManager = ObjectManager()
     }
 
     // == BASIC STRATEGY METHODS ==
@@ -657,8 +658,10 @@ abstract class ManagedStrategy(
         beforeNotify(iThread, codeLocation, tracePoint, monitor, notifyAll)
     }
 
+
     override fun beforeReadField(obj: Any, className: String, fieldName: String, codeLocation: Int) = runInIgnoredSection {
         if (isFinalField(className, fieldName)) return@runInIgnoredSection
+        if (objectManager.isLocalObject(obj)) return@runInIgnoredSection
         val iThread = currentThreadNumber()
         val tracePoint = if (collectTrace) {
             ReadTracePoint(iThread, currentActorId[iThread], callStackTrace[iThread],
@@ -688,6 +691,7 @@ abstract class ManagedStrategy(
     }
 
     override fun beforeReadArrayElement(array: Any, index: Int, codeLocation: Int) = runInIgnoredSection {
+        if (objectManager.isLocalObject(array)) return@runInIgnoredSection
         val iThread = currentThreadNumber()
         val tracePoint = if (collectTrace) {
             ReadTracePoint(iThread, currentActorId[iThread], callStackTrace[iThread],
@@ -713,6 +717,10 @@ abstract class ManagedStrategy(
     }
 
     override fun beforeWriteField(obj: Any, className: String, fieldName: String, value: Any?, codeLocation: Int) = runInIgnoredSection {
+        objectManager.addDependency(obj, value)
+        if (objectManager.isLocalObject(obj)) {
+            return@runInIgnoredSection
+        }
         val iThread = currentThreadNumber()
         val tracePoint = if (collectTrace) {
             WriteTracePoint(iThread, currentActorId[iThread], callStackTrace[iThread],
@@ -726,6 +734,7 @@ abstract class ManagedStrategy(
     }
 
     override fun beforeWriteFieldStatic(className: String, fieldName: String, value: Any?, codeLocation: Int) = runInIgnoredSection {
+        objectManager.deleteLocalObject(value)
         val iThread = currentThreadNumber()
         val tracePoint = if (collectTrace) {
             WriteTracePoint(iThread, currentActorId[iThread], callStackTrace[iThread],
@@ -739,6 +748,10 @@ abstract class ManagedStrategy(
     }
 
     override fun beforeWriteArrayElement(array: Any, index: Int, value: Any?, codeLocation: Int) = runInIgnoredSection {
+        objectManager.addDependency(array, value)
+        if (objectManager.isLocalObject(array)) {
+            return@runInIgnoredSection
+        }
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
             WriteTracePoint(iThread, currentActorId[iThread], callStackTrace[iThread],
@@ -859,7 +872,11 @@ abstract class ManagedStrategy(
         beforeMethodCall(owner, className, methodName, codeLocation, arrayOf(param1, param2, param3, param4, param5))
     }
 
+    private var objectManager = ObjectManager()
 
+    override fun onNewObjectCreation(obj: Any?) {
+        objectManager.newObject(obj!!)
+    }
 
     private inline fun <R> runInIgnoredSection(block: () -> R): R {
         val t = Thread.currentThread() as? TestThread

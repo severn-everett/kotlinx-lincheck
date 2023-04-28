@@ -242,7 +242,7 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
             if (methodName == "loadClass") mv = ClassLoaderTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
             return mv
         }
-        if (methodName == "<clinit>" || methodName == "<init>") {
+        if (methodName == "<clinit>") {
             mv = AFUTrackingTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
             return IgnoreClassInitializationTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
         }
@@ -418,7 +418,7 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
         ManagedStrategyMethodVisitor(methodName, adapter) {
 
         init {
-            check(methodName == "<clinit>" || methodName == "<init>")
+            check(methodName == "<clinit>")
         }
 
         override fun visitCode() = adapter.run {

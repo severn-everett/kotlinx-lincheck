@@ -56,6 +56,7 @@ internal interface SharedEventsTracker {
     fun getRandom(currentThreadId: Int): Random
 
     fun shouldAnalyzeCurrentThread(): Boolean
+    fun onNewObjectCreation(obj: Any?)
 }
 
 /**
