@@ -102,8 +102,10 @@ internal class RandomScenariosAdaptivePlanner(
 
     override val scenarios = sequence {
         while (true) {
-            val n = floor(planner.testingProgress * configurations.size).toInt()
-            val (threads, operations) = configurations[min(n, configurations.size - 1)]
+            val n = round(planner.testingProgress * configurations.size).toInt()
+                .coerceAtLeast(0)
+                .coerceAtMost(configurations.size - 1)
+            val (threads, operations) = configurations[n]
             yield(scenarioGenerator.nextExecution(threads, operations,
                 if (generateBeforeAndAfterParts) operations else 0,
                 if (generateBeforeAndAfterParts) operations else 0,

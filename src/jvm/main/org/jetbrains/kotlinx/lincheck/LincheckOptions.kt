@@ -26,7 +26,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*
-import kotlin.math.round
+import kotlin.math.*
 import kotlin.reflect.*
 
 interface LincheckOptions {
@@ -294,9 +294,9 @@ internal class LincheckOptionsImpl : LincheckOptions {
     private fun createRandomScenariosPlanner(mode: LincheckMode, testStructure: CTestStructure, statisticsTracker: StatisticsTracker): Planner =
         RandomScenariosAdaptivePlanner(
             mode = mode,
-            minThreads = DEFAULT_MIN_THREADS,
+            minThreads = min(DEFAULT_MIN_THREADS, maxThreads),
+            minOperations = min(DEFAULT_MIN_OPERATIONS, maxOperationsInThread),
             maxThreads = maxThreads,
-            minOperations = DEFAULT_MIN_OPERATIONS,
             maxOperations = maxOperationsInThread,
             generateBeforeAndAfterParts = generateBeforeAndAfterParts,
             minimizeFailedScenario = minimizeFailedScenario,
