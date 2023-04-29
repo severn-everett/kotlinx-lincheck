@@ -186,6 +186,8 @@ internal class AdaptivePlanner(
 
     override fun shouldDoNextIteration(iteration: Int): Boolean {
         check(iteration == statisticsTracker.iteration)
+        if (remainingTimeNano <= 0)
+            return false
         if (iteration > 0) {
             adjustBounds(
                 currentIteration = iteration,
@@ -193,7 +195,7 @@ internal class AdaptivePlanner(
                 remainingTimeNano = remainingTimeNano,
             )
         }
-        return (remainingTimeNano > 0) && (iteration < iterationsBound)
+        return (iteration < iterationsBound)
     }
 
     override fun shouldDoNextInvocation(invocation: Int): Boolean {
@@ -225,6 +227,8 @@ internal class AdaptivePlanner(
      * (this can happen, for example, when we hit invocation max/min bounds).
      */
     private fun adjustBounds(currentIteration: Int, averageInvocationTimeNano: Double, remainingTimeNano: Long) {
+        require(averageInvocationTimeNano > 0)
+        require(remainingTimeNano > 0)
         // calculate invocation and iteration bounds
         val remainingInvocations = remainingTimeNano / averageInvocationTimeNano
         invocationsBound = sqrt(remainingInvocations * INVOCATIONS_TO_ITERATIONS_RATIO).toInt()
@@ -239,32 +243,29 @@ internal class AdaptivePlanner(
         val remainingTimeEstimateNano = remainingIterations * iterationTimeEstimateNano
         val timeDiffNano = abs(remainingTimeEstimateNano - remainingTimeNano)
         val iterationsDiff = ceil(timeDiffNano / iterationTimeEstimateNano).toInt()
-        // if we over-perform and there is still time left, try to increase iterations bound
-        if (remainingTimeEstimateNano < remainingTimeNano) {
-            // if there is time to perform K full additional iterations, add K
-            if (iterationsDiff >= ITERATIONS_DELTA) {
+        // if we over-perform or under-perform by a number of K iterations,
+        // then we increase/decrease remaining iterations bound
+        if (iterationsDiff >= ITERATIONS_DELTA) {
+            if (remainingTimeEstimateNano < remainingTimeNano)
                 remainingIterations += iterationsDiff
-            // if there is no time to perform K full additional iterations, we still can add one more iteration ---
-            // in case of overdue it will be just aborted when the time is up;
-            // addition of this iteration helps us to prevent the case when we finish earlier and
-            // do not use all allocated testing time;
-            // however, because in some rare cases even single invocation can take significant time
-            // and thus surpass the deadline, we still perform additional check
-            // to see if there enough time to perform at least L additional invocations.
-            } else if (averageInvocationTimeNano * INVOCATIONS_DELTA < timeDiffNano) {
-                remainingIterations += 1
-            }
-        // if we under-perform and miss the deadline, try to decrease bound
-        } else if (remainingTimeEstimateNano > remainingTimeNano) {
-            // if the delay takes K full iterations, subtract K
-            if (iterationsDiff >= ITERATIONS_DELTA) {
+            else
                 remainingIterations -= iterationsDiff
-            }
         }
-        // finally, set the iterations bound
-        iterationsBound = currentIteration + remainingIterations.coerceAtLeast(0)
+        remainingIterations = remainingIterations.coerceAtLeast(0)
 
-        println("iterationsBound=$iterationsBound, invocationsBound=$invocationsBound")
+        // if there is no remaining iterations, but there is still some time left,
+        // we still can try to perform one more iteration ---
+        // in case of overdue it will be just aborted when the time is up;
+        // this additional iteration helps us to prevent the case when we finish earlier and
+        // do not use all allocated testing time;
+        // however, because in some rare cases even single invocation can take significant time
+        // and thus surpass the deadline, we still perform additional check
+        // to see if there enough time to perform at least L additional invocations.
+        if (remainingIterations == 0 && averageInvocationTimeNano * INVOCATIONS_DELTA < remainingTimeNano)
+            remainingIterations += 1
+
+        // finally, set the iterations bound
+        iterationsBound = currentIteration + remainingIterations
     }
 
     companion object {

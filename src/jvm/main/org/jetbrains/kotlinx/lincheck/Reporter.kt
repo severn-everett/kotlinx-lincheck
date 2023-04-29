@@ -38,9 +38,10 @@ class Reporter constructor(private val logLevel: LoggingLevel) {
         appendExecutionScenario(scenario)
     }
 
-    fun logIterationStatistics(invocations: Int, timeNano: Long) = log(INFO) {
-        val timeSec = timeNano.toDouble() / 1_000_000_000
-        appendln("= Statistics: #invocations=$invocations, running time ${String.format("%.3f", timeSec)}s =")
+    fun logIterationStatistics(invocations: Int, runningTimeNano: Long, remainingTimeNano: Long?) = log(INFO) {
+        val runningTime = nanoTimeToString(runningTimeNano)
+        val remainingString = remainingTimeNano?.let { String.format(", remaining time ${nanoTimeToString(it)}s") } ?: ""
+        appendln("= Statistics: #invocations=$invocations, running time ${runningTime}s${remainingString} =")
     }
 
     fun logFailedIteration(failure: LincheckFailure) = log(INFO) {
@@ -51,7 +52,6 @@ class Reporter constructor(private val logLevel: LoggingLevel) {
         appendln("\nInvalid interleaving found, trying to minimize the scenario below:")
         appendExecutionScenario(scenario)
     }
-
 
     private inline fun log(logLevel: LoggingLevel, crossinline msg: StringBuilder.() -> Unit): Unit = synchronized(this) {
         if (this.logLevel > logLevel) return
@@ -244,3 +244,6 @@ private fun StringBuilder.appendException(t: Throwable) {
     t.printStackTrace(PrintWriter(sw))
     appendln(sw.toString())
 }
+
+internal fun nanoTimeToString(timeNano: Long) =
+    String.format("%.3f", timeNano.toDouble() / 1_000_000_000)

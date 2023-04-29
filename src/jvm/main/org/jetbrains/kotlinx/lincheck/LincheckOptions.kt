@@ -244,7 +244,7 @@ internal class LincheckOptionsImpl : LincheckOptions {
             scenario.validate()
             reporter.logIteration(i + 1, scenario)
             scenario.run(mode, testClass, testStructure, verifier, invocationsPlanner, statisticsTracker).also {
-                reporter.logIterationStatistics(statisticsTracker)
+                reporter.logIterationStatistics(planner, statisticsTracker)
             }
         } ?: return null
         if (planner.minimizeFailedScenario) {
@@ -282,11 +282,12 @@ internal class LincheckOptionsImpl : LincheckOptions {
             it.run(verifier, planner, statisticsTracker)
         }
 
-    private fun Reporter.logIterationStatistics(statisticsTracker: StatisticsTracker?) {
+    private fun Reporter.logIterationStatistics(planner: Planner, statisticsTracker: StatisticsTracker?) {
         statisticsTracker ?: return
         logIterationStatistics(
             statisticsTracker.currentIterationInvocationsCount,
             statisticsTracker.currentIterationRunningTimeNano,
+            (planner.iterationsPlanner as? AdaptivePlanner)?.remainingTimeNano,
         )
     }
 
