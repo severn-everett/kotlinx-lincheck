@@ -45,7 +45,4 @@ class RunBlockingTest : AbstractLincheckTest() {
         }
     }
 
-    override fun LincheckOptionsImpl.customize() {
-        testingTimeInSeconds = 1
-    }
 }

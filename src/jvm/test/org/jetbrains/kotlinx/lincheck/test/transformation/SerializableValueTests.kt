@@ -38,7 +38,7 @@ class SerializableResultTest : AbstractLincheckTest() {
     fun getAndSet(key: Int) = counter.getAndSet(ValueHolder(key))
 
     override fun LincheckOptionsImpl.customize() {
-        testingTimeInSeconds = 1
+        generateBeforeAndAfterParts = false
     }
 }
 
@@ -49,7 +49,7 @@ class SerializableJavaUtilResultTest : AbstractLincheckTest() {
     fun get(key: Int) = value
 
     override fun LincheckOptionsImpl.customize() {
-        testingTimeInSeconds = 1
+        generateBeforeAndAfterParts = false
     }
 }
 
@@ -85,7 +85,7 @@ class SerializableParameterTest : AbstractLincheckTest() {
     fun operation(@Param(name = "key") key: ValueHolder): Int = counter.addAndGet(key.value)
 
     override fun LincheckOptionsImpl.customize() {
-        testingTimeInSeconds = 1
+        generateBeforeAndAfterParts = false
     }
 }
 
@@ -112,7 +112,7 @@ class SerializableJavaUtilParameterTest : AbstractLincheckTest() {
     fun operation(@Param(name = "key") key: List<Int>): Int = key[0] + key.sum()
 
     override fun LincheckOptionsImpl.customize() {
-        testingTimeInSeconds = 1
+        generateBeforeAndAfterParts = false
     }
 }
 
@@ -128,7 +128,7 @@ class SerializableNullParameterTest : AbstractLincheckTest() {
     fun operation(@Param(name = "key") key: List<Int>?): Int = key?.sum() ?: 0
 
     override fun LincheckOptionsImpl.customize() {
-        testingTimeInSeconds = 1
+        generateBeforeAndAfterParts = false
     }
 }
 

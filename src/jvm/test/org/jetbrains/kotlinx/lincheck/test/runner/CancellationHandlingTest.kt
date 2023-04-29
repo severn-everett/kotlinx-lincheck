@@ -46,7 +46,6 @@ class CancellationHandlingTest : AbstractLincheckTest() {
     }
 
     override fun LincheckOptionsImpl.customize() {
-        testingTimeInSeconds = 1
         generateBeforeAndAfterParts = false
     }
 }

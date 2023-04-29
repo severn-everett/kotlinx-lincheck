@@ -65,6 +65,13 @@ class KotlinStdlibTransformationTest : AbstractLincheckTest() {
     }
 
     override fun LincheckOptionsImpl.customize() {
-        testingTimeInSeconds = 1
+        generateRandomScenarios = false
+        addCustomScenario {
+            parallel {
+                thread {
+                    actor(::operation)
+                }
+            }
+        }
     }
 }
