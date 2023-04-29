@@ -165,13 +165,6 @@ internal class AdaptivePlanner(
     private var iterationsBound = INITIAL_ITERATIONS_BOUND
 
     /**
-     * Number of remaining iterations, calculated based on current iterations bound.
-     */
-    private val remainingIterations: Int
-        get() = iterationsBound - statisticsTracker.iteration
-
-
-    /**
      * Upper bound on the number of invocations per iteration.
      * Adjusted automatically during each iteration.
      */
@@ -195,7 +188,9 @@ internal class AdaptivePlanner(
         check(iteration == statisticsTracker.iteration)
         if (iteration > 0) {
             adjustBounds(
-                averageInvocationTimeNano = statisticsTracker.averageInvocationTimeNano(iteration - 1)
+                currentIteration = iteration,
+                averageInvocationTimeNano = statisticsTracker.averageInvocationTimeNano(iteration - 1),
+                remainingTimeNano = remainingTimeNano,
             )
         }
         return (remainingTimeNano > 0) && (iteration < iterationsBound)
@@ -229,29 +224,45 @@ internal class AdaptivePlanner(
      * then we manually add/remove few iterations to better fit into the time constraints
      * (this can happen, for example, when we hit invocation max/min bounds).
      */
-    private fun adjustBounds(averageInvocationTimeNano: Double) {
+    private fun adjustBounds(currentIteration: Int, averageInvocationTimeNano: Double, remainingTimeNano: Long) {
         // calculate invocation and iteration bounds
-        val totalInvocations = testingTimeNano / averageInvocationTimeNano
-        invocationsBound = sqrt(totalInvocations * INVOCATIONS_TO_ITERATIONS_RATIO).toInt()
+        val remainingInvocations = remainingTimeNano / averageInvocationTimeNano
+        invocationsBound = sqrt(remainingInvocations * INVOCATIONS_TO_ITERATIONS_RATIO).toInt()
             .roundUpTo(INVOCATIONS_FACTOR)
             .coerceAtLeast(invocationsLowerBound)
             .coerceAtMost(invocationsUpperBound)
         // calculate remaining iterations bound
-        iterationsBound = (invocationsBound.toDouble() / INVOCATIONS_TO_ITERATIONS_RATIO)
-            .let { floor(it).toInt() }
-            .coerceAtLeast(statisticsTracker.iteration)
-
+        var remainingIterations = (invocationsBound.toDouble() / INVOCATIONS_TO_ITERATIONS_RATIO)
+            .let { round(it).toInt() }
         // adjust the remaining iterations bounds to fit into deadline
         val iterationTimeEstimateNano = invocationsBound * averageInvocationTimeNano
         val remainingTimeEstimateNano = remainingIterations * iterationTimeEstimateNano
         val timeDiffNano = abs(remainingTimeEstimateNano - remainingTimeNano)
         val iterationsDiff = ceil(timeDiffNano / iterationTimeEstimateNano).toInt()
-        if (iterationsDiff >= ITERATIONS_DELTA) {
-            if (remainingTimeEstimateNano > remainingTimeNano)
-                iterationsBound -= iterationsDiff
-            else
-                iterationsBound += iterationsDiff
+        // if we over-perform and there is still time left, try to increase iterations bound
+        if (remainingTimeEstimateNano < remainingTimeNano) {
+            // if there is time to perform K full additional iterations, add K
+            if (iterationsDiff >= ITERATIONS_DELTA) {
+                remainingIterations += iterationsDiff
+            // if there is no time to perform K full additional iterations, we still can add one more iteration ---
+            // in case of overdue it will be just aborted when the time is up;
+            // addition of this iteration helps us to prevent the case when we finish earlier and
+            // do not use all allocated testing time;
+            // however, because in some rare cases even single invocation can take significant time
+            // and thus surpass the deadline, we still perform additional check
+            // to see if there enough time to perform at least L additional invocations.
+            } else if (averageInvocationTimeNano * INVOCATIONS_DELTA < timeDiffNano) {
+                remainingIterations += 1
+            }
+        // if we under-perform and miss the deadline, try to decrease bound
+        } else if (remainingTimeEstimateNano > remainingTimeNano) {
+            // if the delay takes K full iterations, subtract K
+            if (iterationsDiff >= ITERATIONS_DELTA) {
+                remainingIterations -= iterationsDiff
+            }
         }
+        // finally, set the iterations bound
+        iterationsBound = currentIteration + remainingIterations.coerceAtLeast(0)
 
         println("iterationsBound=$iterationsBound, invocationsBound=$invocationsBound")
     }
@@ -262,6 +273,9 @@ internal class AdaptivePlanner(
 
         // number of iterations added/subtracted when we over- or under-perform the plan
         private const val ITERATIONS_DELTA = 1
+
+        // number of additional invocations added as the last additional iteration when we over perform
+        private const val INVOCATIONS_DELTA = 1
 
         // initial number of invocations
         private const val INITIAL_INVOCATIONS_BOUND = 1_000
