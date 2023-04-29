@@ -29,7 +29,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import java.lang.reflect.*
 
-@Suppress("DEPRECATION_ERROR")
 internal class StressStrategy(
     testClass: Class<*>,
     scenario: ExecutionScenario,

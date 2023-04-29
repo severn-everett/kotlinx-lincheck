@@ -42,6 +42,8 @@ class UnexpectedTransformedExceptionTest : AbstractLincheckTest(UnexpectedExcept
             throw CustomException()
         return 0
     }
+
+    override fun extractState(): Any = 0 // constant state
 }
 
 internal class CustomException : Throwable()

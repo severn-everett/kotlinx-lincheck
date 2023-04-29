@@ -258,7 +258,6 @@ abstract class ManagedStrategy(
                     else null
                 }.filterNotNull().any { it.causesBlocking }
 
-    @Suppress("DEPRECATION_ERROR")
     private fun checkLiveLockHappened(interleavingEventsCount: Int) {
         if (interleavingEventsCount > ManagedCTestConfiguration.LIVELOCK_EVENTS_THRESHOLD) {
             suddenInvocationResult = DeadlockInvocationResult(collectThreadDump(runner))

@@ -24,8 +24,6 @@ package org.jetbrains.kotlinx.lincheck.test
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
-import org.junit.*
 import kotlin.coroutines.*
 
 class UnexpectedExceptionTest : AbstractLincheckTest(UnexpectedExceptionFailure::class) {
@@ -43,7 +41,6 @@ class UnexpectedExceptionTest : AbstractLincheckTest(UnexpectedExceptionFailure:
     }
 
     override fun extractState(): Any = canEnterForbiddenSection
-
 }
 
 class CoroutineResumedWithUnexpectedExceptionTest : AbstractLincheckTest(UnexpectedExceptionFailure::class) {

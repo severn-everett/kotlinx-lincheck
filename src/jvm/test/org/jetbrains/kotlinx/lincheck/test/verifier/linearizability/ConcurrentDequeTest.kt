@@ -44,6 +44,6 @@ class ConcurrentDequeTest : AbstractLincheckTest() {
     fun pollLast() = deque.pollLast()
 
     override fun LincheckOptionsImpl.customize() {
-        testingTimeInSeconds = 10 // more time, because stress strategy not always finds the bug quickly
+        testingTimeInSeconds = 30 // more time, because stress strategy not always finds the bug quickly
     }
 }

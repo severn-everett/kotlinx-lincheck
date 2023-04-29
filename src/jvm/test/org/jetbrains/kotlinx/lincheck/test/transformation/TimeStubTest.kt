@@ -55,9 +55,7 @@ class TimeStubTest : VerifierState() {
 
     @Test
     fun test() {
-        LincheckOptions {
-            testingTimeInSeconds = 1
-        }.check(this::class)
+        LincheckOptions().check(this::class)
     }
 
     override fun extractState(): Any = 0 // constant state

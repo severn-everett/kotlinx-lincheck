@@ -38,7 +38,6 @@ class SerializableQueueTest : AbstractLincheckTest() {
     fun poll(): Int? = q.poll()
 
     override fun LincheckOptionsImpl.customize() {
-        maxThreads = 3
         verifier = SerializabilityVerifier::class.java
         sequentialImplementation = SequentialIntQueue::class.java
     }

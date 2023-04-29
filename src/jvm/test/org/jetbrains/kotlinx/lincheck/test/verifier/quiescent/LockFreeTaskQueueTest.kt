@@ -45,7 +45,6 @@ class LockFreeTaskQueueTest : AbstractLincheckTest() {
     fun close() = q.close()
 
     override fun LincheckOptionsImpl.customize() {
-        maxThreads = 3
         verifier = QuiescentConsistencyVerifier::class.java
     }
 }

@@ -45,4 +45,5 @@ class RunBlockingTest : AbstractLincheckTest() {
         }
     }
 
+    override fun extractState() = Unit
 }

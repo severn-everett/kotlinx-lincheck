@@ -41,4 +41,5 @@ class ThreadIdTest : AbstractLincheckTest() {
         if (c < 0) error("The counter cannot be negative")
     }
 
+    override fun extractState() = balances.toList() to counter.value
 }

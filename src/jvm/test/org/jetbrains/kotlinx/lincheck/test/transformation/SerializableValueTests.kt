@@ -28,7 +28,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.test.*
 import org.junit.*
 import org.junit.Assert.*
-import java.io.*
+import java.io.Serializable
 import java.util.concurrent.atomic.*
 
 class SerializableResultTest : AbstractLincheckTest() {
