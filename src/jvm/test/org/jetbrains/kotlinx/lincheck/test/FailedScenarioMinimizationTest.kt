@@ -40,14 +40,18 @@ class FailedScenarioMinimizationTest: VerifierState() {
     override fun extractState() = counter
 
     @Test
-    @Suppress("DEPRECATION_ERROR")
     fun testWithoutMinimization() {
-        val options = StressOptions()
-            .actorsPerThread(10)
-            .invocationsPerIteration(100_000)
-            .minimizeFailedScenario(false)
+        val options = LincheckOptions {
+            this as LincheckOptionsImpl
+            mode = LincheckMode.Stress
+            minThreads = 10
+            maxThreads = 10
+            minOperationsInThread = 10
+            maxOperationsInThread = 10
+            minimizeFailedScenario = false
+        }
         try {
-            LinChecker.check(FailedScenarioMinimizationTest::class.java, options)
+            options.check(FailedScenarioMinimizationTest::class.java)
             fail("Should fail with AssertionError")
         } catch (e: AssertionError) {
             val m = e.message!!
@@ -59,13 +63,14 @@ class FailedScenarioMinimizationTest: VerifierState() {
     }
 
     @Test
-    @Suppress("DEPRECATION_ERROR")
     fun testWithMinimization() {
-        val options = StressOptions()
-            .actorsPerThread(10)
-            .invocationsPerIteration(100_000)
+        val options = LincheckOptions {
+            this as LincheckOptionsImpl
+            mode = LincheckMode.Stress
+            maxOperationsInThread = 10
+        }
         try {
-            LinChecker.check(FailedScenarioMinimizationTest::class.java, options)
+            options.check(FailedScenarioMinimizationTest::class.java)
             fail("Should fail with AssertionError")
         } catch (e: AssertionError) {
             val m = e.message!!

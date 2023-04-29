@@ -129,10 +129,14 @@ internal class LincheckOptionsImpl : LincheckOptions {
     override var checkObstructionFreedom: Boolean = false
 
     internal var mode = LincheckMode.Hybrid
-    internal var invocationTimeoutMs = CTestConfiguration.DEFAULT_TIMEOUT_MS
     internal var minimizeFailedScenario = true
     internal var generateRandomScenarios = true
     internal var generateBeforeAndAfterParts = true
+
+    internal var minThreads = DEFAULT_MIN_THREADS
+    internal var minOperationsInThread = DEFAULT_MIN_OPERATIONS
+
+    internal var invocationTimeoutMs = CTestConfiguration.DEFAULT_TIMEOUT_MS
 
     internal val customScenariosOptions = mutableListOf<CustomScenarioOptions>()
 
@@ -294,8 +298,8 @@ internal class LincheckOptionsImpl : LincheckOptions {
     private fun createRandomScenariosPlanner(mode: LincheckMode, testStructure: CTestStructure, statisticsTracker: StatisticsTracker): Planner =
         RandomScenariosAdaptivePlanner(
             mode = mode,
-            minThreads = min(DEFAULT_MIN_THREADS, maxThreads),
-            minOperations = min(DEFAULT_MIN_OPERATIONS, maxOperationsInThread),
+            minThreads = min(minThreads, maxThreads),
+            minOperations = min(minOperationsInThread, maxOperationsInThread),
             maxThreads = maxThreads,
             maxOperations = maxOperationsInThread,
             generateBeforeAndAfterParts = generateBeforeAndAfterParts,

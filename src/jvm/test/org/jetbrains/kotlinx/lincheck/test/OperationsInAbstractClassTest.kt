@@ -23,19 +23,21 @@ package org.jetbrains.kotlinx.lincheck.test
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.junit.*
 import java.lang.AssertionError
 import kotlin.random.*
 
-@Suppress("DEPRECATION_ERROR")
-@StressCTest(iterations = 1, minimizeFailedScenario = false, requireStateEquivalenceImplCheck = false)
 class OperationsInAbstractClassTest : AbstractTestClass() {
     @Operation
     fun goodOperation() = 10
 
     @Test(expected = AssertionError::class)
-    fun test(): Unit = LinChecker.check(this::class.java)
+    fun test(): Unit = LincheckOptions {
+        this as LincheckOptionsImpl
+        mode = LincheckMode.Stress
+        testingTimeInSeconds = 1
+        minimizeFailedScenario = false
+    }.check(this::class.java)
 }
 
 open class AbstractTestClass {
