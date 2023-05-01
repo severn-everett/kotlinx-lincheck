@@ -84,7 +84,7 @@ abstract class ManagedStrategy(
     // == TRACE CONSTRUCTION FIELDS ==
 
     // Whether an additional information requires for the trace construction should be collected.
-    private var collectTrace = false
+    internal var collectTrace = false
     // Whether state representations (see `@StateRepresentation`) should be collected after interleaving events.
     private val collectStateRepresentation get() = collectTrace && stateRepresentationFunction != null
     // Trace point constructors, where `tracePointConstructors[id]`
@@ -356,10 +356,11 @@ abstract class ManagedStrategy(
      */
     private fun awaitTurn(iThread: Int) {
         // Wait actively until the thread is allowed to continue
+        var i = 0
         while (currentThread != iThread) {
             // Finish forcibly if an error occurred and we already have an `InvocationResult`.
             if (suddenInvocationResult != null) throw ForcibleExecutionFinishException
-            Thread.yield()
+            if (++i % SPINNING_LOOP_ITERATIONS_BEFORE_YIELD == 0) Thread.yield()
         }
     }
 
@@ -762,6 +763,7 @@ private class ManagedStrategyRunner(
     }
 
     override fun constructStateRepresentation(): String? {
+        if (!managedStrategy.collectTrace) return null
         // Enter ignored section, because Runner will call transformed state representation method
         val iThread = managedStrategy.currentThreadNumber()
         managedStrategy.enterIgnoredSection(iThread)
@@ -928,3 +930,5 @@ internal object ForcibleExecutionFinishException : RuntimeException() {
 }
 
 private const val COROUTINE_SUSPENSION_CODE_LOCATION = -1 // currently the exact place of coroutine suspension is not known
+
+private const val SPINNING_LOOP_ITERATIONS_BEFORE_YIELD = 100_000
